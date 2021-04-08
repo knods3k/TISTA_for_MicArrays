@@ -5,33 +5,40 @@ from helper import simple_soft_threshold
 eta = simple_soft_threshold
 
 class TISTALayer(keras.layers.Layer):
-	def __init__(self,Wt,initial_lambda,initial_gamma):
+	def __init__(self,T,initial_lambda,initial_gamma):
 		super(TISTALayer, self).__init__()
-		self.Wt_ = Wt
-		self.lam = tf.Variable(initial_lambda,name="lam",trainable=True)
-		self.gam = tf.Variable(initial_gamma,name="gam",trainable=True)
-	def call(self, xhat_,yWt_):
-		r = xhat_ + self.gam * yWt_
+		self._name = "TISTA_" + str(T)
+
+		self.lam = tf.Variable(initial_lambda,name="lam"+str(T),trainable=True)
+		self.gam = tf.Variable(initial_gamma,name="gam"+str(T),trainable=True)
+	def call(self, xhat_,r):
+		r = xhat_ + self.gam * r
 		xhat_ = eta(r,self.lam)
 		return xhat_
 
 class TISTA(keras.Model):
-	def __init__(self,W,initial_lambda=0.1,initial_gamma=1.0,T=6):
+	def __init__(self,A,W,initial_lambda=0.0,initial_gamma=1.0,T=6):
 		super(TISTA, self).__init__()
 		self.T = T
 		
-		Wt = tf.transpose(W)
+		self.M,self.N = A.shape
 
-		self.Wt_ = tf.Variable(Wt,dtype=tf.float32,name='Wt_',trainable=False)
-		self.lyrs = []
+		At 	= tf.transpose(A)
+		Wt 	= tf.transpose(W)
+
+		self.A 		= A
+		self.At		= At
+		self.W		= W	
+		self.Wt_ 	= tf.Variable(Wt,dtype=tf.float32,name='Wt_',trainable=False)
+		self.lyrs 	= []
 		for t in range(T):
-			self.lyrs.append(TISTALayer(Wt,initial_lambda,initial_gamma))
+			self.lyrs.append(TISTALayer(t,initial_lambda,initial_gamma))
 
 	def call(self,y,training=False):
-		yWt_ = tf.matmul(y,self.Wt_)
-		xhat_ = 0.0
+		xhat_ = tf.zeros((1,self.N))
+		r = tf.einsum("ij,kl -> ki ",self.W, (y - tf.tensordot(xhat_,self.At,1)))
 		for layer in self.lyrs:
-			xhat_ = layer(xhat_,yWt_)
+			xhat_ = layer(xhat_,r)
 		return xhat_
 
 # LISTA NOT WORKING YET
