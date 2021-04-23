@@ -17,19 +17,23 @@ if __name__ == "__main__":
     BATCHSIZE   = 200
     LRATE       = 0.0008
     EPOCHS      = 100
-    STEPS       = 100
+    STEPS       = 10
 
-    A           = load(FILENAME_A)
-    W           = load(FILENAME_W) # W = tf.pinv(A) PENROSE INVERSE
+    # A           = load(FILENAME_A)
+    # W           = load(FILENAME_W) # W = tf.pinv(A) PENROSE INVERSE
     # train_data  = get_batch(TRAINING,BATCHSIZE)
     # valid_data  = get_batch(VALIDATION,BATCHSIZE)
+
+    A = tf.random.normal((25,50),0, 1.0 / 25**(1/2))
+    W = tf.linalg.pinv(A)
     train_data  = get_bg_batch(A,BATCHSIZE)
     valid_data  = get_bg_batch(A,BATCHSIZE)
 
     callbacks = [tensorboard_cb,checkpoint_cb,early_stopping_cb]
-    #callbacks = []
+    # callbacks = []
 
     model   = TISTA(A,W,initial_lambda=0.0,T=15)
+    # model   = LISTA(A,initial_lambda=0.0,T=6)
 
     optim   = tf.keras.optimizers.Adam(LRATE)
     loss    = tf.keras.losses.MeanSquaredError()
