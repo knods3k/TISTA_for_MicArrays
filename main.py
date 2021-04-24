@@ -1,7 +1,7 @@
 #%%
 import tensorflow as tf
 from numpy import load
-from models import TISTA, LISTA
+from models import TISTA, LISTA, TISTA_serial
 from reader import get_batch
 from bernoulli_gaussian import get_bg_batch
 from callbacks import *
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     BATCHSIZE   = 200
     LRATE       = 0.0008
     EPOCHS      = 100
-    STEPS       = 10
+    STEPS       = 100
 
     # A           = load(FILENAME_A)
     # W           = load(FILENAME_W) # W = tf.pinv(A) PENROSE INVERSE
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     callbacks = [tensorboard_cb,checkpoint_cb,early_stopping_cb]
     # callbacks = []
 
-    model   = TISTA(A,W,initial_lambda=0.0,T=15)
+    model   = TISTA_serial(A,W,initial_lambda=0.0,T=15)
     # model   = LISTA(A,initial_lambda=0.0,T=6)
 
     optim   = tf.keras.optimizers.Adam(LRATE)
