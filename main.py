@@ -1,10 +1,11 @@
 #%%
 import tensorflow as tf
 from numpy import load
-from models import TISTA, LISTA, TISTA_serial
+from models import *
 from reader import get_batch
 from bernoulli_gaussian import get_bg_batch
 from callbacks import *
+from loss_funcs import *
 
 if __name__ == "__main__":
 
@@ -15,7 +16,7 @@ if __name__ == "__main__":
 
     TRAINSIZE   = 100000
     BATCHSIZE   = 200
-    LRATE       = 0.0008
+    LRATE       = 0.00008
     EPOCHS      = 100
     STEPS       = 100
 
@@ -29,18 +30,23 @@ if __name__ == "__main__":
     train_data  = get_bg_batch(A,BATCHSIZE)
     valid_data  = get_bg_batch(A,BATCHSIZE)
 
-    callbacks = [tensorboard_cb,checkpoint_cb,early_stopping_cb]
+    # callbacks = [tensorboard_cb,checkpoint_cb,early_stopping_cb]
+    callbacks = [early_stopping_cb]
     # callbacks = []
 
-    model   = TISTA_serial(A,W,initial_lambda=0.0,T=15)
-    # model   = LISTA(A,initial_lambda=0.0,T=6)
+    model   = TISTA(A,W,initial_lambda=0.0,T=15)
+    loss = mse
 
-    optim   = tf.keras.optimizers.Adam(LRATE)
-    loss    = tf.keras.losses.MeanSquaredError()
-    model.compile(optimizer=optim,loss=loss)
+    for i  in range(3):
+        optim   = tf.keras.optimizers.Adam(LRATE)
+        model.compile(optimizer=optim,loss=loss)
+        model.fit(train_data,validation_data=valid_data,batch_size=BATCHSIZE,\
+            epochs=EPOCHS,steps_per_epoch=STEPS, validation_steps=STEPS/10,\
+                callbacks=callbacks)
+        LRATE *= 0.1
 
-    model.fit(train_data,validation_data=valid_data,batch_size=BATCHSIZE,\
-        epochs=EPOCHS,steps_per_epoch=STEPS, validation_steps=STEPS/10, callbacks=callbacks)
+    model.compile(loss=nmse_db)
+    model.evaluate(valid_data,steps=10)
 
 #%%
 # TEST

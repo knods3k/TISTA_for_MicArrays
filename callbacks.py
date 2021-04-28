@@ -17,5 +17,5 @@ save_best_only=True
 )
 
 early_stopping_cb = tf.keras.callbacks.EarlyStopping(
-    patience=10, restore_best_weights=True
+    patience=3, restore_best_weights=True
 )
