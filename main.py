@@ -1,4 +1,5 @@
 #%%
+from re import M
 import tensorflow as tf
 from numpy import load
 from models import *
@@ -25,7 +26,9 @@ if __name__ == "__main__":
     # train_data  = get_batch(TRAINING,BATCHSIZE)
     # valid_data  = get_batch(VALIDATION,BATCHSIZE)
 
-    A = tf.random.normal((25,50),0, 1.0 / 25**(1/2))
+    N = 500
+    M = N//2
+    A = tf.random.normal((M,N),0, 1.0 / N**(1/2))
     W = tf.linalg.pinv(A)
     train_data  = get_bg_batch(A,BATCHSIZE)
     valid_data  = get_bg_batch(A,BATCHSIZE)
@@ -34,16 +37,14 @@ if __name__ == "__main__":
     callbacks = [early_stopping_cb]
     # callbacks = []
 
-    model   = TISTA(A,W,initial_lambda=0.0,T=15)
+    model   = TISTA(A,W,initial_lambda=0.0,T=20)
     loss = mse
 
-    for i  in range(3):
-        optim   = tf.keras.optimizers.Adam(LRATE)
-        model.compile(optimizer=optim,loss=loss)
-        model.fit(train_data,validation_data=valid_data,batch_size=BATCHSIZE,\
-            epochs=EPOCHS,steps_per_epoch=STEPS, validation_steps=STEPS/10,\
-                callbacks=callbacks)
-        LRATE *= 0.1
+    optim   = tf.keras.optimizers.Adam(LRATE)
+    model.compile(optimizer=optim,loss=loss)
+    model.fit(train_data,validation_data=valid_data,batch_size=BATCHSIZE,\
+        epochs=EPOCHS,steps_per_epoch=STEPS, validation_steps=STEPS/10,\
+            callbacks=callbacks)
 
     model.compile(loss=nmse_db)
     model.evaluate(valid_data,steps=10)
