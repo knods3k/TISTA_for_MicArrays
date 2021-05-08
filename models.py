@@ -1,26 +1,28 @@
 import tensorflow as tf
 from tensorflow import keras
+from numpy import pi
 
 def simple_soft_threshold(r, lam):
-    lam = tf.maximum(lam, 0)
-    return tf.sign(r) * tf.maximum(tf.abs(r) - lam, 0)
+	lam = tf.maximum(lam, 0)
+	return tf.sign(r) * tf.maximum(tf.abs(r) - lam, 0)
 
-def mmse(y,lam,a,p):
-    lam = tf.maximum(lam, 0)
-	F = lambda x,y: tf.exp((-x**2) / (2*y+1e-18))	
-	xi = a + lam
-	return y*a*p*F(y,xi) / ((1-p)*F(y,lam) + p*F(y,xi) + 1e-18)
+def mmse(y,sig,a,p):
+	sig = tf.maximum(sig,0)
+	a = tf.maximum(a,0)
+	xi = sig + a
+	F = lambda z,v: (2*pi*v)**-0.5 * tf.exp((-z**2) / (2*v))
+	return ((y*a)/xi) * (p*F(y,xi)) / ((1-p)*F(y,sig) + (p)*F(y,xi))
 
 
 eta = simple_soft_threshold
 
 class TISTA(keras.Model):
-	def __init__(self,A,W,initial_lambda=0.0,initial_gamma=1.0,T=6):
+	def __init__(self,A,initial_lambda=0.1,initial_gamma=1.0,T=6):
 		super(TISTA, self).__init__()
 		self.T = T
 
 		self.A 		= A
-		self.W		= W
+		self.W		= W = tf.linalg.pinv(A)
 		self.lams 	= []
 		self.gams 	= []
 		for t in range(T):
@@ -31,10 +33,10 @@ class TISTA(keras.Model):
 		s = tf.matmul(y*0.0,self.A)
 		for lam,gam in zip(self.lams,self.gams):
 			s = eta(s + gam * tf.einsum("ij,kj->ki",self.W,y - tf.einsum("ij,kj->ki",self.A,s)),lam)
-		return s# tf.nn.relu(s)
+		return  tf.nn.relu(s)
 
 class TISTA_mmse(keras.Model):
-	def __init__(self,A,W,initial_lambda=0.0,initial_gamma=1.0,T=6):
+	def __init__(self,A,initial_lambda=0.1,initial_gamma=1.0,T=6):
 		super(TISTA_mmse, self).__init__()
 		self.T = T
 
@@ -42,7 +44,7 @@ class TISTA_mmse(keras.Model):
 		self.p		= tf.Variable(0.1,name="p",trainable=True)
 
 		self.A 		= A
-		self.W		= W	
+		self.W		= W = tf.linalg.pinv(A)
 		self.lams 	= []
 		self.gams 	= []
 		for t in range(T):
@@ -56,7 +58,7 @@ class TISTA_mmse(keras.Model):
 		return s #tf.nn.relu(s)
 
 class LISTA(keras.Model):
-	def __init__(self,A,W,initial_lambda=0.0,T=6):
+	def __init__(self,A,initial_lambda=0.0,T=6):
 		super(LISTA, self).__init__()
 		self.T = T
 
