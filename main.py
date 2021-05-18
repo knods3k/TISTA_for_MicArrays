@@ -7,23 +7,24 @@ from reader import get_batch
 from bernoulli_gaussian import get_bg_batch
 from callbacks import *
 from loss_funcs import *
+import numpy as np
 
 if __name__ == "__main__":
 
-    TRAINING    = "data/training_100000samples_random_process_04_1372Hz_cankayser.tfrecord"
-    VALIDATION  = "data/validation_10000samples_random_process_04_1372Hz_cankayser.tfrecord"
-    FILENAME_A  = "data/A_1372Hz.npy"
+    # TRAINING    = "data/training_100000samples_random_process_04_1372Hz_cankayser.tfrecord"
+    # VALIDATION  = "data/validation_10000samples_random_process_04_1372Hz_cankayser.tfrecord"
+    # FILENAME_A  = "data/A_1372Hz.npy"
     # FILENAME_A  = "data/A_5488Hz.npy"
     # FILENAME_A  = "data/A_random.npy"
     # FILENAME_W  = "data/W_1372Hz.npy"
 
-    TRAINSIZE   = 100000
+    # TRAINSIZE   = 100000
     BATCHSIZE   = 200
     LRATE       = 0.00008
     EPOCHS      = 100
     STEPS       = 100
 
-    A = tf.convert_to_tensor(load(FILENAME_A))
+    # A = tf.convert_to_tensor(load(FILENAME_A))
     # W = tf.linalg.pinv(A)
 
     # train_data  = get_batch(TRAINING,BATCHSIZE)
@@ -34,27 +35,39 @@ if __name__ == "__main__":
     # callbacks = [tensorboard_cb,checkpoint_cb,early_stopping_cb]
     callbacks = [early_stopping_cb]
     # callbacks = []
-
+#%%
     filenames = ["1372Hz","2744Hz","5488Hz","random"]
     info = []
-    for filename in filenames:
-        file = "data/A_" + filename +".npy"
-        A = tf.convert_to_tensor(load(file))
-        train_data  = get_bg_batch(A,BATCHSIZE,pnz=0.01,SNR=40,noise=False)
-        valid_data  = train_data
-        condition = cond(A)
-        model   = TISTA(A,initial_lambda=0.0,T=20)
-        loss    = tf.keras.losses.MeanSquaredError()
+    SNRs = [60,40,20]
+    while i < 3:    
+        while j < 4:
+            SNR = SNRs[i]
+            filename = filenames[j]
+            file = "data/A_" + filename +".npy"
+            A = tf.convert_to_tensor(load(file))
+            train_data  = get_bg_batch(A,BATCHSIZE,pnz=0.005,SNR=SNR,noise=True)
+            valid_data  = train_data
+            condition = cond(A)
+            model   = TISTA(A,initial_lambda=0.0,T=20)
+            loss    = tf.keras.losses.MeanSquaredError()
 
-        optim   = tf.keras.optimizers.Adam(LRATE)
-        model.compile(optimizer=optim,loss=loss)
-        model.fit(train_data,validation_data=valid_data,batch_size=BATCHSIZE,\
-            epochs=EPOCHS,steps_per_epoch=STEPS, validation_steps=STEPS/10,\
-                callbacks=callbacks,verbose=1)
+            optim   = tf.keras.optimizers.Adam(LRATE)
+            model.compile(optimizer=optim,loss=loss)
+            model.fit(train_data,validation_data=valid_data,batch_size=BATCHSIZE,\
+                epochs=EPOCHS,steps_per_epoch=STEPS, validation_steps=STEPS/10,\
+                    callbacks=callbacks,verbose=0)
 
-        model.compile(loss=nmse_db)
-        NMSE = model.evaluate(valid_data,steps=10)
-        info.append([filename,condition,NMSE])
+            model.save("models/" + filename + "_" + str(SNR) +"SNR")
+            model.compile(loss=nmse_db)
+            NMSE = model.evaluate(valid_data,steps=10)
+            info.append([filename,condition,NMSE])
+            j += 1
+        j = 0
+        i += 1
+    
+    print(info)
+
+
 
 #%%
 # TEST
