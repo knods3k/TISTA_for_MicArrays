@@ -19,3 +19,7 @@ default-eb128731-4cf3-4c0a-9e5c-b6539bb1a2e4.ipynb
 .ipynb_checkpoints/default-01584d57-5148-4797-b945-c860153fdd6b-checkpoint.ipynb
 .ipynb_checkpoints/default-eb128731-4cf3-4c0a-9e5c-b6539bb1a2e4-checkpoint.ipynb
 models
+plots
+__pycache__
+.vscode
+data

@@ -3,7 +3,8 @@ from tensorflow import keras
 from numpy import pi
 
 def simple_soft_threshold(r, lam):
-	lam = tf.maximum(lam, 0)
+	# lam = tf.maximum(lam, 0)
+	lam = tf.nn.relu(lam)
 	return tf.sign(r) * tf.maximum(tf.abs(r) - lam, 0)
 
 def mmse(y,sig,a,p):
@@ -29,9 +30,9 @@ class TISTA(keras.Model):
 			self.lams.append(tf.Variable(initial_lambda,name="lam"+str(t),trainable=True))
 			self.gams.append(tf.Variable(initial_gamma,name="gam"+str(t),trainable=True))
 	
-	def call(self,y,training=True):
+	def call(self,y,training=True,T=None):
 		s = tf.matmul(y*0.0,self.A)
-		for lam,gam in zip(self.lams,self.gams):
+		for lam,gam in zip(self.lams[:T],self.gams[:T]):
 			s = eta(s + gam * tf.einsum("ij,kj->ki",self.W,y - tf.einsum("ij,kj->ki",self.A,s)),lam)
 		return  tf.nn.relu(s)
 
