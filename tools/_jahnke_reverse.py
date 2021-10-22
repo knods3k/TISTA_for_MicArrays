@@ -23,4 +23,23 @@ def transform_y_to_csm(y):
 	assert all(csm_ == csm_.T.conj())
 	return csm_
 
+def reshape_sourcemap(x):
+	N = x.shape[0]
+	gridsize = N
+	gridlen	 = int(gridsize**0.5)
+
+	x = x[:gridsize].reshape(gridlen,gridlen)
+	return x
+
+def transform_tensor_to_sourcemap(x):
+	x = x.numpy()[0]
+	x = unstack_complex_vector(x)
+	x = x.real
+	x = reshape_sourcemap(x)
+	return x
+
+def transform_tensor_to_vector(x):
+	x = x.numpy()[0]
+	x = unstack_complex_vector(x)
+	return x
 # %%

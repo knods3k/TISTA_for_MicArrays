@@ -4,16 +4,13 @@ import numpy as np
 
 def bg_generator(A,pnz=0.01,SNR=40,noise=True):
     M,N = A.shape
-    # noise_var = (10 ** (-SNR/10))
 
     x = ((np.random.uniform( 0,1,N)<pnz*2) * np.random.normal(0,1,N))
     x = np.abs(x)
     x[N//2:] = 0
     x = x.astype(np.float32)
-    # x[:] = 1
     
     y = np.matmul(A,x)
-    # noise_var = np.sqrt((10 ** (-SNR/10)) * np.mean(np.abs(y))**2 * 1.825) #(N/M)**(pnz**(M/N)))
     noise_var = (10**(-SNR/10)) * np.mean(np.abs(y))
     y = y + noise*np.random.normal(0,noise_var,M)
     y = y.astype(np.float32)

@@ -2,8 +2,7 @@
 import tensorflow as tf
 from numpy import mean, load, count_nonzero
 import pandas as pd
-from bernoulli_gaussian import get_bg_batch
-from reader import get_batch
+from tools.bernoulli_gaussian import get_bg_batch
 from matplotlib import pyplot as plt
 
 
@@ -23,21 +22,21 @@ def reshape_sourcemap(x):
 	x = x[:gridsize].reshape(gridlen,gridlen)
 	return x
 
-TESTSIZE = 10
+TESTSIZE = 100
 BATCHSIZE = 1
 
-SNR = 40
-HE = 16
-WORST = 0
+SNR = 20
+HE = 4
+WORST = 1
 
 FREQ = 343 * HE
-MODEL = f"{FREQ}Hz_{SNR}SNR"
+MODEL = f"He={HE}_SNR={SNR}"
 SAVEFILE = f"He={HE}_SNR={SNR}_"
 if not WORST:
 	SAVEFILE += "bestcase"
 else:
 	SAVEFILE += "worstcase"
-A = load(f"data/A_{FREQ}Hz.npy")
+A = load(f"models/He={HE}_SNR={SNR}/A_{HE}.npy")
 model = tf.keras.models.load_model("models/"+MODEL)
 train_data = get_bg_batch(A,BATCHSIZE,SNR=SNR,noise=False).repeat()
 

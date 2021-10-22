@@ -2,12 +2,11 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import os
-from main import model
 
 plt.rcParams["figure.figsize"] = (16,9)
 plt.rcParams["figure.dpi"] = 100
 
-MODEL 	= "He15.0_sim"
+MODEL 	= "1372"
 PATH 	= os.path.join("models/",MODEL)
 
 # try:

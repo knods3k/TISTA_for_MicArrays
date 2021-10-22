@@ -6,9 +6,9 @@ from loss_funcs import nmse_db
 from tensorflow import einsum, reduce_mean, convert_to_tensor
 from matplotlib import pyplot as plt 
 from numpy import log10, abs, load
+from test_cleansc import A 
 
-A = convert_to_tensor(load(f"data/A_{4*343}Hz.npy"))
-train_data= get_bg_batch(A,0.01,SNR=0)
+train_data= get_bg_batch(A,200,SNR=0)
 y,x = next(iter(train_data))
 
 y_ = einsum("ij,kj->ki",A,x)

@@ -32,16 +32,15 @@ from acoular import __file__ as bpath, config, MicGeom, WNoiseGenerator, PointSo
 from pylab import figure, plot, axis, imshow, colorbar, show
 from _spectra_import import PowerSpectraImport
 from _jahnke_reverse import *
-from main import train_data,A
-from test_models import reshape_sourcemap
-from numpy import expand_dims, zeros, matmul
+from test_cleansc import data,A,HE, model
+from numpy import expand_dims, zeros, matmul, sum, abs, argmin, clip, max
 from loss_funcs import nmse_db
 from matplotlib import pyplot as plt
 
 config.global_caching="none" # disable caching!
 
 # set up the parameters
-sfreq = 40*343.
+sfreq = 10*HE*343
 duration = 1
 nsamples = duration*sfreq
 micgeofile = path.join(path.split(bpath)[0],'xml','array_64.xml')
@@ -63,29 +62,57 @@ pa = Mixer( source=p1, sources=[p2,p3] )
 # set the CSM of the PowerSpectra object at PowerSpectraImport
 ps = PowerSpectra( time_data=pa, block_size=128, window='Hanning' )
 # csm = ps.csm[:,:,:].copy() # copy the csm from PowerSpectra object
-y,x = next(iter(train_data))
+freq = HE*343
+y,x = next(iter(data))
+x = x.numpy()
+#x[x != max(x)] = 0
+
 y_simu = y.numpy()[0]
-y_calc = matmul(A,x[0].numpy())
+y_calc = matmul(A,x[0])
 sourcemaps=[]
+
+for y_ in [y_simu,y_calc ]:
+	sourcemaps.append(reshape_sourcemap(unstack_complex_vector(model(y).numpy()[0])))
+	
+
+plt.figure()
+plt.imshow(L_p(reshape_sourcemap(unstack_complex_vector(x[0]).real)),origin="lower",vmax=95,vmin=75)
+plt.colorbar()
+plt.figure()
+plt.imshow(L_p(sourcemaps[1].real),origin="lower",vmax=95,vmin=75)
+plt.title("Calculated")
+plt.colorbar()
+plt.figure()
+plt.imshow(L_p(sourcemaps[0].real),origin="lower",vmax=95,vmin=75)
+plt.title("Simulated")
+plt.colorbar()
+
+
+#%%
+
 for y_ in [y_simu,y_calc ]:
 	y_ = unstack_complex_vector(y_)
 	csm_ = transform_y_to_csm(y_)
 	csm_ = expand_dims(csm_,axis=0)
 	csm = zeros((65,16,16),dtype=complex)
-	csm[48] = csm_
 
 
 	ps_import = PowerSpectraImport(csm=csm, sample_freq=sfreq) # it is mandatory to also set the sample_freq attribute!
 
+	fftidx = ps_import.fftfreq().searchsorted(freq)
+	csm[fftidx] = csm_
+	
 	# analyze the data and generate map
 	# ts = TimeSamples( name=h5savefile )
 	# ps = PowerSpectra( time_data=ts, block_size=128, window='Hanning' )
 
 	rg = RectGrid( x_min=-0.5, x_max=0.5, y_min=-0.5, y_max=0.5, z=.5,increment=0.04 )
-	st = SteeringVector(grid=rg, mics=mg)
-
-	bb = BeamformerBase( freq_data=ps_import, steer=st, r_diag=True)
-	pm = bb.synthetic( 15*343., 0 )
+	st	= SteeringVector(grid=rg, mics=mg)			# steering vector
+	ref_mic_idx = argmin(sum(abs(mg.mpos),axis=1))
+	ref_mic_pos = mg.mpos.T[ref_mic_idx]
+	st._set_ref(ref_mic_pos)
+	bb = BeamformerCleansc( freq_data=ps_import, steer=st, r_diag=True)
+	pm = bb.synthetic( ps.fftfreq()[fftidx], 0 )
 	Lm = L_p( pm ).T
 	sourcemaps.append(Lm)
 
@@ -104,7 +131,7 @@ for y_ in [y_simu,y_calc ]:
 # fig.show()
 
 plt.figure()
-plt.imshow(reshape_sourcemap(x[0].numpy()))
+plt.imshow(L_p(reshape_sourcemap(unstack_complex_vector(x[0]).real)).T,origin="lower",vmax=95,vmin=75)
 plt.colorbar()
 plt.figure()
 plt.imshow(sourcemaps[1],origin="lower",vmax=95,vmin=75)

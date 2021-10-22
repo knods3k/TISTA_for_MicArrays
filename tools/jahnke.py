@@ -39,8 +39,27 @@ def transform_rg_mg_to_A (rg,mg,freq,i):
 
 	if used accordingly this will return matrix A of jahnke formulation
 	such that y = A*x
+		"""
+	sv	= SteeringVector(grid=rg, mics=mg)			# steering vector
+	ref_mic_idx = np.argmin(np.sum(np.abs(mg.mpos),axis=1))
+	ref_mic_pos = mg.mpos.T[ref_mic_idx]
+	sv._set_ref(ref_mic_pos)						# set reference position to microphone closest ot origin
+	tv	= sv.transfer(freq)							# transfer matrix
+	tm	= np.einsum("ij,il -> ijl",tv,tv.conj())	# transfer matrix remodelling
+	A = tm[:,i[0],i[1]].T
+	return A
+
+def transform_sv_to_A (sv,freq,i):
 	"""
-	sv	= SteeringVector(grid=rg, mics=mg)		# steering vector
+	return sensing matrix A
+
+	sv should be acoular SteeringVector object
+	freq should be frequency for which to calculate A
+	i should be output of jahnke.find_indices()
+
+	if used accordingly this will return matrix A of jahnke formulation
+	such that y = A*x
+		"""
 	tv	= sv.transfer(freq)							# transfer matrix
 	tm	= np.einsum("ij,il -> ijl",tv,tv.conj())	# transfer matrix remodelling
 	A = tm[:,i[0],i[1]].T
