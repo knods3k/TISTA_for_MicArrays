@@ -1,6 +1,7 @@
 #%%
 import numpy as np
 from acoular import SteeringVector
+from tools.config import rg,mg,sv
 
 # this file is intended to help with implementing the formulation for linear
 # optimization for microphone array data such that y = A * x found in Alexander
@@ -48,6 +49,12 @@ def transform_rg_mg_to_A (rg,mg,freq,i):
 	tm	= np.einsum("ij,il -> ijl",tv,tv.conj())	# transfer matrix remodelling
 	A = tm[:,i[0],i[1]].T
 	return A
+
+def create_sensing_matrix(freq):
+
+    i = find_indices(mg)
+    A = stack_complex_matrix(transform_sv_to_A(sv,freq,i)).astype(np.float32)
+    return A
 
 def transform_sv_to_A (sv,freq,i):
 	"""
@@ -138,4 +145,6 @@ def stack_complex_vector(v):
 	"""
 	v_hat = np.append(v.real,v.imag,axis=0)
 	return v_hat
+# %%
+
 # %%
