@@ -5,9 +5,10 @@ import os
 
 plt.rcParams["figure.figsize"] = (16,9)
 plt.rcParams["figure.dpi"] = 100
+plt.rc("font",size=14)
 
-MODEL 	= "1372"
-PATH 	= os.path.join("models/",MODEL)
+MODEL 	= "He=16_SNR=40"
+PATH 	= os.path.join("models T=30",MODEL)
 
 # try:
 # 	model_weights
@@ -45,6 +46,18 @@ lams = ws[:len(ws)//2]
 gams = ws[len(ws)//2:]
 model_weights.append([MODEL,lams,gams])
 
+plt.figure()
+plt.plot(gams,label=r"Stepsize $\beta$")
+plt.plot(lams,label=r"Meshsize $\lambda$")
+plt.xlabel("Layer")
+plt.ylabel("Numerical Value")
+plt.legend()
+
+
+
+
+#%%
+
 
 fig = plt.figure()
 for model in model_weights:
@@ -54,14 +67,17 @@ for model in model_weights:
 	
 	ax1 = fig.add_subplot(211)
 	ax2 = fig.add_subplot(212)
-	ax1.set_title("Lambdas")
-	ax1.plot(lams,label=name)
-	ax2.set_title("Gammas")
-	ax2.plot(gams,label=name)
+	ax1.plot(lams)
+	ax1.set_ylabel(r"Meshsize $\lambda$")
+	ax2.plot(gams)
+	ax2.set_ylabel(r"Stepsize $\beta$")
+	ax2.set_xlabel(r"Layer $T$")
 
-ax1.legend()
+#ax1.legend()
 fig.show()
 
 
 
+# %%
+fig.savefig("data/plots/model_weights.pdf")
 # %%

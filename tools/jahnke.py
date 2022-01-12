@@ -1,7 +1,7 @@
 #%%
 import numpy as np
 from acoular import SteeringVector
-from tools.config import rg,mg,sv
+from tools.environment import rg,mg,sv
 
 # this file is intended to help with implementing the formulation for linear
 # optimization for microphone array data such that y = A * x found in Alexander

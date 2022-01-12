@@ -53,10 +53,12 @@ class PowerSpectraImport( PowerSpectra ):
     # csm shadow trait
     _csm = CArray(
         )
-    
+
+    _csmsum = Float() #: only to trigger digest calculation
+
     # internal identifier
     digest = Property( 
-        depends_on = ['_csm',
+        depends_on = ['_csmsum', 'sample_freq',
             ], 
         )
 
@@ -93,6 +95,7 @@ class PowerSpectraImport( PowerSpectra ):
         return self._csm
 
     def _set_csm (self, csm):
+        self._csmsum = csm.sum() # to trigger new digest creation
         self._csm = csm
 
     def _get_basename( self ):

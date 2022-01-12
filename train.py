@@ -3,11 +3,11 @@ import tensorflow as tf
 from tensorflow.keras.models import load_model
 from numpy import save, load
 from tools.training.models import TISTA
-from tools.training.bernoulli_gaussian import get_bg_batch
+from tools.training.data import get_bg_batch
 from tools.training.callbacks import early_stopping_cb,checkpoint_cb,tensorboard_cb
 from tools.training.loss_funcs import nmse_db
 from tools.jahnke import create_sensing_matrix
-from tools.config import sv, mg, HE, SNR 
+from tools.environment import sv, mg, HE, SNR 
 #from tools.matrix_A import create_sensing_matrix
 
 BATCHSIZE   = 200
@@ -23,13 +23,13 @@ callbacks = [early_stopping_cb]
 if __name__ == "__main__":
 
 # TRAIN MODELS FOR DIFFERENT T
-    for T in range(3,40,3):
-        A = create_sensing_matrix(sv,mg,HE*343)
+    for T in range(30,40,1):
+        A = create_sensing_matrix(HE*343)
         A = tf.convert_to_tensor(A)
 
-        modelname = f"He={HE}_SNR={SNR}_T={T}"
+        modelname = f"He={HE}_SNR={SNR}_T={T:02d}"
 
-        train_data = get_bg_batch(A,BATCHSIZE,SNR=SNR,noise=True).repeat()
+        train_data = get_bg_batch(A,BATCHSIZE,SNR=SNR,noise=False).repeat()
         valid_data = train_data
 
         model   = TISTA(A,T=T)
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 # INITIALLY TRAIN MODELS
     for HE in [16,8,4]:
         for SNR in [40,20,10]:
-            A = create_sensing_matrix(sv, mg, HE*343)
+            A = create_sensing_matrix(HE*343)
             A = tf.convert_to_tensor(A)
 
             modelname = f"He={HE}_SNR={SNR}"

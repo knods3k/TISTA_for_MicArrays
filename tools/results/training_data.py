@@ -1,14 +1,12 @@
 #%%
-from bernoulli_gaussian import get_bg_batch
-
-print("check")
-from loss_funcs import nmse_db
+from tools.training.data import get_bg_batch
+from tools.training.loss_funcs import nmse_db
+from tools.model import A
 from tensorflow import einsum, reduce_mean, convert_to_tensor
 from matplotlib import pyplot as plt 
 from numpy import log10, abs, load
-from test_cleansc import A 
 
-train_data= get_bg_batch(A,200,SNR=0)
+train_data= get_bg_batch(A,200,SNR=40)
 y,x = next(iter(train_data))
 
 y_ = einsum("ij,kj->ki",A,x)

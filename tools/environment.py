@@ -1,16 +1,13 @@
 #%%
 from os.path import dirname, join, pardir, normpath
-from tools.training.bernoulli_gaussian import get_bg_batch
-from tensorflow.keras.models import load_model
 from acoular import MicGeom, RectGrid, SteeringVector
-from numpy import argmin, sum, abs, load
-#from jahnke import create_sensing_matrix
+from numpy import argmin, sum, abs, load, Infinity
 
 # SETUP
 
-SNR=20
-HE=8
-freq = HE*343
+SNR=10
+HE=16
+FREQ = HE*343
 
 
 
@@ -33,20 +30,5 @@ sv	= SteeringVector(grid=rg, mics=mg)
 ref_mic_idx = argmin(sum(abs(mg.mpos),axis=1))
 ref_mic_pos = mg.mpos.T[ref_mic_idx]
 sv._set_ref(ref_mic_pos)				
-
-
-
-# MODEL
-
-try:
-    A = load(APATH)
-    model = load_model(MODELPATH)
-    data = get_bg_batch(A,1,SNR=SNR)
-except Exception as e:
-    #print(e.message)
-    #A = create_sensing_matrix(sv,mg,freq)
-    #data = get_bg_batch(A,1,SNR=SNR)
-    print("Model doesn't exist")
-
 
 # %%

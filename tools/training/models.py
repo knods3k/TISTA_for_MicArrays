@@ -21,9 +21,12 @@ class TISTA(keras.Model):
 	def __init__(self,A,initial_lambda=0.1,initial_gamma=1.0,T=6):
 		super(TISTA, self).__init__()
 		self.T = T
+		self.T_save = tf.Variable(self.T,name="T",trainable=False)
 
-		self.A 		= A
-		self.W		= W = tf.linalg.pinv(A)
+		self.A 	= A
+		self.W	= tf.linalg.pinv(A)
+		self.A_save = tf.Variable(self.A,name="A",trainable=False)
+		self.W_save = tf.Variable(self.W,name="W",trainable=False)
 		self.lams 	= []
 		self.gams 	= []
 		for t in range(T):
