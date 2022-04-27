@@ -1,7 +1,11 @@
 #%%
 import numpy as np
+import tensorflow as tf
 from acoular import SteeringVector
 from tools.environment import rg,mg,sv
+
+from tensorflow.python.ops.numpy_ops import np_config
+np_config.enable_numpy_behavior()
 
 # this file is intended to help with implementing the formulation for linear
 # optimization for microphone array data such that y = A * x found in Alexander
@@ -145,6 +149,77 @@ def stack_complex_vector(v):
 	"""
 	v_hat = np.append(v.real,v.imag,axis=0)
 	return v_hat
-# %%
 
+
+def stack_complex_tensor(v):
+	v_hat = tf.concat((tf.math.real(v), tf.math.imag(v)), axis=0)
+	return v_hat
+
+
+# REVERSE
+
+
+def unstack_complex_vector(y):
+	N = y.shape[0]
+
+	N = N//2
+
+	re = y[:N]
+	im = y[-N:]
+	y_ = re + 1j*im
+
+	return y_
+
+
+def unstack_complex_tensor(y):
+	N = y.shape[1]
+	assert N%2 == 0
+
+	N = N//2
+
+	re = y[0][:N]
+	im = y[0][-N:]		
+	y_ = tf.complex(re, im)
+	return y_
+
+
+def transform_y_to_csm(y):
+	N = y.shape[0]
+	N = -.5 + np.sqrt(.25 + N*2)
+	assert N%1 == 0
+	N = int(N)
+
+	csm = np.zeros((N,N),dtype=complex)
+	i = np.triu_indices(N)
+	csm[i] = y
+	csm_ = csm + csm.T.conj()
+	csm_[np.diag_indices(N)] /= 2
+	assert all(csm_ == csm_.T.conj())
+	return csm_
+
+def reshape_sourcemap(x):
+	N = x.shape[0]
+	gridsize = N
+	gridlen	 = int(np.ceil(gridsize**0.5))
+
+	x = x[:gridsize].reshape(gridlen,gridlen)
+	return x
+
+def transform_tensor_to_sourcemap(x):
+	x = x.numpy()[0]
+	x = unstack_complex_vector(x)
+	x = x.real
+	x = reshape_sourcemap(x)
+	return x
+
+def transform_graphtensor_to_sourcemap(x):
+	x = unstack_complex_tensor(x)
+	x = tf.math.real(x)
+	x = reshape_sourcemap(x)
+	return x
+
+def transform_tensor_to_vector(x):
+	x = x.numpy()[0]
+	x = unstack_complex_vector(x)
+	return x
 # %%

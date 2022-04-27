@@ -16,7 +16,7 @@ BASEPATH = normpath(join(FILEPATH,pardir,pardir,"models T=30"))
 
 
 HISTORY_PATH = normpath(\
-                "C:\\Users\\kaysec\\VSCodeProjects\\KERAS_Train\\models He=16\\He=16_SNR=999_T=02\\history.npy"
+                "C:\\Users\\kaysec\\VSCodeProjects\\TISTA_FOR_MICARRAYS\\models He=16\\He=16_SNR=999_T=02\\history.npy"
                         )
 HISTORY_PATH = normpath(HISTORY_PATH)
 history = load(HISTORY_PATH,allow_pickle=True)
@@ -27,7 +27,7 @@ histories = {}
 
 for root,subdirs,files in walk(BASEPATH):
     for file in files:
-        if "SNR=0" in root:
+        if "SNR=10" in root:
             pass
         elif file == "history.npy":# and "He=8" in root:
             print(root)
@@ -68,17 +68,15 @@ for name, hist in histories.items():
     HE = retrieve_he(name)
     T = retrieve_T(name)
     
-    if f"SNR={SNR}" in name:
+    if f"SNR={SNR}" in name and HE is 16:
         color = next(color_cycle)
-        plt.plot(hist[0],color=color,label=f"He = {HE} (Training)")
-        plt.plot(hist[1],color=color,marker="x",linestyle="",label=f"He = {HE} (Validation)")
+        plt.plot(hist[0][1:60],color=color,label=f"Training")
+        plt.plot(hist[1][1:60],color=color,marker="x",linestyle="",label=f"Validation")
         plt.xlabel("Number of Epochs")
         plt.ylabel("Mean Squared Error")
         plt.legend()
         plt.ticklabel_format(style="sci",scilimits=(0,2))
         
-plt.savefig(f"data/plots/history_snr{SNR}.pdf")
-#%%
 plt.savefig(f"data/plots/history_snr{SNR}.pdf")
 
 

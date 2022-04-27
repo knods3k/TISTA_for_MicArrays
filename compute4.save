@@ -1,0 +1,15 @@
+#!/bin/bash
+
+NAME="kayser"
+SOURCE="/home/kayser/TISTA_for_MicArrays"
+
+docker run --user "$(id -u)":"$(id -g)" --group-add 1007 \ 
+-v $SOURCE:"/workspace" \ 
+--gpus device=2 --name=$NAME -it --rm -p 8001:8001 \
+python train.py
+
+docker run --user "$(id -u)":"$(id -g)" --group-add 1007 -v "$(pwd)":"/workspace" --gpus device=2 --name="kayser" -it --rm -p 8001:8001 jupyter-tf_acoular21.05:latest python train.py
+
+docker run --user "$(id -u)":"$(id -g)" --group-add 1007 -v "/home/kayser/TISTA_for_MicArrays":"/workspace" --gpus device=2 --name="kayser" -it --rm -p 8001:8001 jupyter-tf_acoular21.05:latest python -m os getcwd()
+
+docker run --user "$(id -u)":"$(id -g)" --group-add 1007 -v "/home/shared/compute4_examples":"/workspace" --gpus device=2 --name=jupyter -it --rm -p 8001:8001 jupyter-tf_acoular21.05:latest bash -c "export NUMBA_CACHE_DIR='/tmp/numba_cache' && jupyter --ip 0.0.0.0 --port 8001 --allow-root --no-browser --notebook-dir=/workspace/"

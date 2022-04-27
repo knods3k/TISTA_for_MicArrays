@@ -14,11 +14,11 @@ plt.rc("font",size=14)
 
 he_dict = {}
 
-for HE in [4,8,16]:
+for HE in [16]:
     freq = HE*343
 
     PATH = dirname(__file__)
-    MODELDIR = normpath(join(PATH,pardir,pardir,f"models He={HE}"))
+    MODELDIR = normpath(join(PATH,pardir,pardir,f"models_64_T=[1,30]"))
     A = create_sensing_matrix(freq)
     data = get_bg_batch(A,1,SNR=999,noise=False)
 
@@ -27,17 +27,14 @@ for HE in [4,8,16]:
     errors = []
 
     for d in dirs:
-        try:
-            print(d)
-            modelpath = normpath(join(PATH,pardir,MODELDIR,d))
-            model = load_model(modelpath,compile=True)
-            #model.compile(loss=nmse_db)
-            e = model.evaluate(data,steps=100)
-            errors.append(e)
-        except:
-            pass
-
-    he_dict[f"{HE}"] = errors
+        print(d)
+        modelpath = normpath(join(PATH,pardir,MODELDIR,d))
+        model = load_model(modelpath,compile=True)
+        #model.compile(loss=nmse_db)
+        e = model.evaluate(data,steps=100)
+        errors.append(e)
+#%%
+    he_dict[f"{HE}"] = errors[:]
 
 #%%
 fig = plt.figure()

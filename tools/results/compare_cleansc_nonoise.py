@@ -25,7 +25,6 @@ plt.rc("font",size=14)
 
 
 # set up the parameters
-NOISY = False
 FREQ = HE*343
 SFREQ = 10*FREQ
 duration = 1
@@ -63,14 +62,14 @@ def cleansc(y_,sfreq=SFREQ,freq=FREQ):
 
 
     bb = BeamformerCleansc( freq_data=ps, steer=sv, r_diag=False)
-    #print(bb.digest)
+    print(bb.digest)
     pm = bb.synthetic( freqs[fftidx], 0 )
     #Lm = L_p( pm ).T
     Lm = pm.real.astype("float32")
     return Lm
 
 
-if __name__ == "__main__" and NOISY == True:
+if __name__ == "__main__":
 	x_true = transform_tensor_to_sourcemap(x).real
 	x_true = L_p(x_true)
 
@@ -81,7 +80,7 @@ if __name__ == "__main__" and NOISY == True:
 
 
 
-	fig, axs = plt.subplots(3,2,sharex=True,sharey=True,figsize=(9,16),dpi=100)
+	fig, axs = plt.subplots(2,2,sharex=True,sharey=True,figsize=(9,16),dpi=100)
 	im = axs[0][0].imshow(x_true,origin="lower",vmax=95,vmin=75,extent=[-.5,.5,-.5,.5])
 	axs[0][0].set_ylabel("True")
 	axs[0][0].set_title(f"CLEAN-SC")# (t = {cleansc_t} s)")
@@ -96,51 +95,32 @@ if __name__ == "__main__" and NOISY == True:
 	axs[1][1].set_ylabel("y")
 	axs[1][1].yaxis.tick_right()
 	axs[1][1].yaxis.set_label_position("right")
-	axs[2][0].imshow(x_cleansc_noise,origin="lower",vmax=95,vmin=75,extent=[-.5,.5,-.5,.5])
-	axs[2][0].set_ylabel("Predicted (with Noise)")
-	axs[2][0].set_xlabel("x")
-	axs[2][1].imshow(x_tista_noise,origin="lower",vmax=95,vmin=75,extent=[-.5,.5,-.5,.5])
-	axs[2][1].set_xlabel("x")
-	axs[2][1].set_ylabel("y")
-	axs[2][1].yaxis.tick_right()
-	axs[2][1].yaxis.set_label_position("right")
 
 	cbar = fig.colorbar(im, ax=axs.ravel().tolist(),orientation="horizontal")
 	cbar.ax.set_title("Sound Pressure Level [dB]")
-	#fig.suptitle(f"He={HE} | SNR={SNR} | NMICS=16 | GRID=26x26 | T=30")
+#fig.suptitle(f"He={HE} | SNR={SNR} | NMICS=16 | GRID=26x26 | T=30")
 
-if __name__ == "__main__" and NOISY == False:
-	x_true = transform_tensor_to_sourcemap(x).real
-	x_true = L_p(x_true)
+#%%
+	fig.savefig(f"data/plots/sourcemaps_he{HE}.pdf")
+#fig.show()
 
-	x_cleansc_noise		= L_p(cleansc(y_simu))
-	x_cleansc 			= L_p(cleansc(y_calc))
-	x_tista_noise 		= L_p(tista(y_simu))
-	x_tista 			= L_p(tista(y_calc))
+#%%
+if __name__ == "__main__":
 	SNR = "Inf"
 	fig, axs = plt.subplots(1,3,sharex=True,sharey=True,figsize=(15,5),dpi=100)
-	im = axs[0].imshow(x_true,origin="lower",vmax=95,vmin=75,extent=[-.5,.5,-.5,.5])
+	im = axs[0].imshow(x_true,origin="lower",vmax=95,vmin=65)
 	axs[0].set_title("True")
-	axs[0].set_xlabel("x")
-	axs[0].set_ylabel("y")
-	axs[1].imshow(x_tista,origin="lower",vmax=95,vmin=75,extent=[-.5,.5,-.5,.5])
+	axs[1].imshow(x_tista,origin="lower",vmax=95,vmin=65)
 	axs[1].set_title(f"TISTA")# (t = {tista_t} s)")
-	axs[1].set_xlabel("x")
-	axs[2].imshow(x_cleansc,origin="lower",vmax=95,vmin=75,extent=[-.5,.5,-.5,.5])
+	axs[2].imshow(x_cleansc,origin="lower",vmax=95,vmin=65)
 	axs[2].set_title(f"CLEAN-SC")# (t = {cleansc_t} s)")
-	axs[2].set_xlabel("x")
 
-	cbar = fig.colorbar(im, ax=axs.ravel().tolist())
-	cbar.ax.yaxis.set_label_position('left')
-	cbar.ax.set_ylabel("Sound Pressure Level [dB]")
+	fig.colorbar(im, ax=axs.ravel().tolist())
 	#fig.suptitle(f"He={HE} | SNR={SNR} | NMICS=16 | GRID=26x26 | T=30")
-#%%
-	#fig.savefig(f"data/plots/sourcemaps_he{HE}.pdf")
 
-#%%
-	fig.savefig(f"data/plots/sourcemaps_he{HE}_nonoise.pdf")
+	fig.show()
 
-#%%
+	#%%
 
 
 
@@ -157,7 +137,7 @@ if __name__ == "__main__" and NOISY == False:
 	plt.colorbar()
 
 
-#%%
+	#%%
 
 	for y_ in [y_simu,y_calc]:
 		y_ = y_.numpy()
@@ -198,7 +178,7 @@ if __name__ == "__main__" and NOISY == False:
 	plt.colorbar()
 
 
-#%%
+	#%%
 
 	i = find_indices(mg)
 	csms = [None,None]
@@ -211,7 +191,7 @@ if __name__ == "__main__" and NOISY == False:
 	ax[1].imshow(csms[1].real)
 	ax[2].imshow((csms[0].real - csms[1].real)**2)
 
-#%%
+	#%%
 
 	# show map
 	imshow( Lm.T, origin='lower', vmin=Lm.max()-10, extent=rg.extend(), )
@@ -224,4 +204,4 @@ if __name__ == "__main__" and NOISY == False:
 
 	show()
 
-# %%
+	# %%
