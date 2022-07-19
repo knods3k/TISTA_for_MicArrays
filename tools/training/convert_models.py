@@ -5,7 +5,6 @@ from pathlib import Path
 from re import search
 from tensorflow.python.keras.saving.saved_model.load import load
 from tools.training.models import TISTA
-from tools.training.data import get_bg_batch
 from tools.jahnke import create_sensing_matrix
 from tensorflow.keras.models import load_model
 from numpy import save

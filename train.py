@@ -1,16 +1,16 @@
 #%%
 from os.path import dirname, join, pardir, normpath
 from os import getcwd
-
+import time 
 import tensorflow as tf
+from tensorflow_probability import distributions as tfd
 from tensorflow.keras.models import load_model
 from numpy import save, load
 from tools.training.models import TISTA
-from tools.training.data import get_bg_batch, get_wis_batch, collect_random_matrices
+from tools.training.data import DataGenerator, collect_random_matrices
 from tools.training.callbacks import early_stopping_cb,checkpoint_cb,tensorboard_cb
 from tools.training.loss_funcs import nmse_db
-from tools.jahnke import create_sensing_matrix
-from tools.environment import sv, mg, HE, SNR, INCREMENT
+from tools.physical import PhyiscalModel
 #from tools.matrix_A import create_sensing_matrix
 
 BATCHSIZE   = 200
@@ -19,11 +19,16 @@ EPOCHS      = 200
 STEPS       = 200
 VERBOSITY   = 1
 
-Ts = [10]
-SNRs = [999]
-HEs = [16]
+NMICS = 64
+INCREMENT = 0.01
+NSOURCES = 10
 
-MODELDIR = normpath("models_64_T=[1,30]")
+Ts = [20,40,60]
+SNRs = [40]
+HEs = [8,4]
+
+SESSION = "Clean"
+MODELDIR = normpath(join("models", f"{SESSION}"))
 
 #callbacks = [tensorboard_cb,checkpoint_cb,early_stopping_cb]
 #callbacks = [checkpoint_cb,early_stopping_cb]
@@ -32,38 +37,43 @@ callbacks = [early_stopping_cb]
 
 if __name__ == "__main__":
 
-    for HE in HEs:
-        for SNR in SNRs:
-            for T in Ts:
-                # random_matrix_path = normpath(join("data", "random_matrices", f"{HE}"))
-                # As = collect_random_matrices(random_matrix_path)
-                A = create_sensing_matrix(HE*343)
-                A = tf.convert_to_tensor(A)
+    for he in HEs:
+        for T in Ts:
+            physics = PhyiscalModel(he, INCREMENT, NMICS)
+            random_matrix_path = normpath(join("data", "random_matrices", f"{he}"))
+            As = random_matrix_path
+            # assert A.shape == As[0].shape
+            A = physics.A
+            pnz = NSOURCES / (A.shape[1] // 2)
 
-                modelname = f"He={HE}_SNR={SNR}_T={T:02d}"
+            modelname = f"He={he}_T={T:02d}"
 
-                train_data = get_wis_batch(A,BATCHSIZE,pnz=0.1,SNR=SNR,noise=True, df=1).repeat()
-                valid_data = train_data
+            normal = tfd.Normal
+            wishart = tfd.WishartLinearOperator
+            generator = DataGenerator(A,BATCHSIZE,pnz=pnz, noise=False)
+            train_data = generator.get_batch().repeat()
+            #noisy_generator = DataGenerator(As,BATCHSIZE,pnz=pnz, noise=False)
+            #valid_data = noisy_generator.get_batch().repeat()
+            valid_data = train_data
+#%%
+            model   = TISTA(A,T=T)
+            #loss    = tf.keras.losses.MeanSquaredError()
+            loss = tf.keras.losses.MeanSquaredError()#reduction=tf.keras.losses.Reduction.SUM)
+            optim   = tf.keras.optimizers.Adam(LRATE)
+            model.compile(optimizer=optim,loss=loss)
+            history = model.fit(train_data,validation_data=valid_data,batch_size=BATCHSIZE,\
+                    epochs=EPOCHS,steps_per_epoch=STEPS, validation_steps=STEPS//10,\
+                        callbacks=callbacks,verbose=VERBOSITY)
+            savepath = normpath(join(MODELDIR, modelname))
+            print(f"Saving model at {join(getcwd(),savepath)}")
+            model.save(savepath)
+            save(normpath(join(savepath,"history.npy")),history.history)
+            #save(normpath(join(MODELDIR,modelname,f"A_{HE}.npy")),A)
 
-                model   = TISTA(A,T=T)
-                #loss    = tf.keras.losses.MeanSquaredError()
-                loss = tf.keras.losses.MeanSquaredError()#reduction=tf.keras.losses.Reduction.SUM)
-                optim   = tf.keras.optimizers.Adam(LRATE)
-                model.compile(optimizer=optim,loss=loss)
-                history = model.fit(train_data,validation_data=valid_data,batch_size=BATCHSIZE,\
-                        epochs=EPOCHS,steps_per_epoch=STEPS, validation_steps=STEPS//10,\
-                            callbacks=callbacks,verbose=VERBOSITY)
-
-                savepath = normpath(join(MODELDIR, modelname))
-                print(f"Saving model at {join(getcwd(),savepath)}")
-                model.save(savepath)
-                save(normpath(join(savepath,"history.npy")),history.history)
-                #save(normpath(join(MODELDIR,modelname,f"A_{HE}.npy")),A)
-
-                model.compile(loss=nmse_db)
-                NMSE = model.evaluate(valid_data,steps=10)
-                with open("logfile.txt","w") as f:
-                    print(f"{modelname}: NMSE_dB = {NMSE}",file=f)
+            model.compile(loss=nmse_db)
+            NMSE = model.evaluate(valid_data,steps=10)
+            with open("logfile.txt","a") as f:
+                print(f"{modelname}: NMSE_dB = {NMSE} \t {time.asctime()}",file=f)
 
 
 #%%

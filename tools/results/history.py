@@ -1,5 +1,5 @@
 #%%
-from numpy import load, ndarray
+import numpy as np
 from os.path import dirname, join, pardir, normpath, isdir
 from os import listdir, walk
 from matplotlib import pyplot as plt
@@ -11,19 +11,16 @@ plt.rcParams["figure.figsize"] = (16,9)
 plt.rcParams["figure.dpi"] = 100
 plt.rc("font",size=14)
 
-FILEPATH = dirname(__file__)
-BASEPATH = normpath(join(FILEPATH,pardir,pardir,"models T=30"))
+BASEPATH = normpath(join("models","Clean"))
 
+HE = 16
+T = 40
+MODELNAME = f"He={HE}_T={T}"
+HISTORY_PATH = normpath(join(f"{BASEPATH}",f"{MODELNAME}","history.npy"))
+history = np.load(HISTORY_PATH,allow_pickle=True)
 
-HISTORY_PATH = normpath(\
-                "C:\\Users\\kaysec\\VSCodeProjects\\TISTA_FOR_MICARRAYS\\models He=16\\He=16_SNR=999_T=02\\history.npy"
-                        )
-HISTORY_PATH = normpath(HISTORY_PATH)
-history = load(HISTORY_PATH,allow_pickle=True)
-
-histories = {}
-
-#%%
+names = []
+histories = []
 
 for root,subdirs,files in walk(BASEPATH):
     for file in files:
@@ -35,48 +32,39 @@ for root,subdirs,files in walk(BASEPATH):
             SNR = retrieve_snr(root)
             HE = retrieve_he(root)
             T = retrieve_T(root)
+            name = f"T={T}_He={HE}"
 
-            history = load(join(root,file),allow_pickle=True)
+            history = np.load(join(root,file),allow_pickle=True)
             history = history.item()
-            loss        = history["loss"]
-            val_loss    = history["val_loss"]
-            name = f"T={T}_He={HE}_SNR={SNR}"
-            histories[name]=(loss,val_loss)
-            
-#%%
-            plt.figure(figsize=(16,9),dpi=100)
-            plt.title(f"SNR = -{SNR} dB   |   He = {HE}")
-            plt.plot(loss,label="Loss")
-            plt.plot(val_loss,label=f"Validation Loss")
-            plt.xlabel("Number of Epochs")
-            plt.ylabel("Mean Squared Error")
-            plt.legend()
-            plt.ticklabel_format(style="sci",scilimits=(0,2))
-
-#%%
-histories = pd.DataFrame(histories)
+            history = pd.DataFrame(history)
+            # name = file
+            names.append(name)
+            histories.append(history)
+histories = pd.concat(histories, keys=names, axis=1)
 
 color_cycle = iter(['C2','C1','C3'])
 
-SNR = 40
-
 plt.figure(figsize=(16,9),dpi=100)
 
-for name, hist in histories.items():
-    
-    #SNR = retrieve_snr(name)
-    HE = retrieve_he(name)
+for name, loss in histories:
     T = retrieve_T(name)
-    
-    if f"SNR={SNR}" in name and HE is 16:
+    histories[name] = histories[name][histories[name].apply(\
+        lambda x: np.abs(x - x.mean()) / x.std() < 3).all(axis=1)]
+
+    # histories[name].dropna(inplace=True)
+
+    if loss == "loss":
         color = next(color_cycle)
-        plt.plot(hist[0][1:60],color=color,label=f"Training")
-        plt.plot(hist[1][1:60],color=color,marker="x",linestyle="",label=f"Validation")
+
+        plt.plot(histories[name].dropna()["loss"], color=color, label=f"Training T={T}")
+        plt.plot(histories[name].dropna()["val_loss"],\
+            color=color, marker="x", linestyle="", label=f"Validation")
         plt.xlabel("Number of Epochs")
         plt.ylabel("Mean Squared Error")
         plt.legend()
         plt.ticklabel_format(style="sci",scilimits=(0,2))
-        
+
+#%%     
 plt.savefig(f"data/plots/history_snr{SNR}.pdf")
 
 

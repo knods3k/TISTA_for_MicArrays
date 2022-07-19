@@ -1,12 +1,23 @@
 #%%
-from tools.training.data import get_bg_batch
+from tools.training.data import DataGenerator
 from tools.training.loss_funcs import nmse_db
-from tools.model import A
+from tools.physical import PhyiscalModel
 from tensorflow import einsum, reduce_mean, convert_to_tensor
 from matplotlib import pyplot as plt 
 from numpy import log10, abs, load
+from os.path import normpath, join
 
-train_data= get_bg_batch(A,200,SNR=40)
+from train import BATCHSIZE
+
+HE = 16
+physics = PhyiscalModel(HE,0.01,64)
+A = physics.A
+
+random_matrix_path = normpath(join("data", "random_matrices", f"{HE}"))
+As = random_matrix_path
+generator = DataGenerator(As,pnz=0.1, noise=False)
+train_data = generator.get_batch().repeat()
+#%%
 y,x = next(iter(train_data))
 
 y_ = einsum("ij,kj->ki",A,x)

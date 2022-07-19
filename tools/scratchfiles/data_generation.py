@@ -3,7 +3,7 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-plt.rcParams["figure.figsize"] = (16,9)
+plt.rcParams["figure.figsize"] = (16*.8,9*.8)
 plt.rcParams["figure.dpi"] = 100
 plt.rcParams["font.size"] = 14
 plt.rc("image",cmap="hot_r")

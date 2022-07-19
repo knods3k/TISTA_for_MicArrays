@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow._api.v2 import data
 
 def parse(record):
     feature_dict= { "y": tf.io.VarLenFeature(tf.float32),

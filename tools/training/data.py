@@ -1,155 +1,126 @@
 #%%
+#%%
+from posixpath import normpath
+from importlib_metadata import distribution
 import tensorflow as tf
-import tensorflow_probability as tfp
+from tensorflow_probability import distributions as tfd
 import numpy as np
 import os
 import random
 
-from tools.jahnke import transform_graphtensor_to_sourcemap, transform_csm_to_y,\
-     find_indices, stack_complex_tensor
-from tools.environment import rg, mg 
+from tools.physical import physics
+from tools.environment import rg, mg
 
 
-e = 2.220446e-16
-rng = tf.random.Generator.from_seed(1)
-I = find_indices(mg)
+A_path = os.path.normpath(os.path.join("data","random_matrices","16"))
 
 
-def rayleigh(shape,sigma=1):
-    u = rng.uniform(shape,e,1)
-    return sigma * tf.sqrt(-2 * tf.math.log(u))
-
-
-def collect_random_matrices(A_path):
+def collect_random_matrix_path(A_path):
     As = []
     for (dirpath, dirnames, filenames) in os.walk(A_path):
         for file in filenames:
             path = os.path.join(dirpath, file)
             path = os.path.normpath(path)
-            As.append(np.load(path))
+            try:
+                As.append(path)
+            except MemoryError:
+                break
     return As
 
+class DataGenerator():
+    def __init__(self, A, batchsize=1, pnz=0.01, SNR=40, noise=True, df=1, distribution=tfd.Normal):
+        if type(A) is str:
+            self.As = collect_random_matrix_path(A)
+            self.A = np.load(self.As[1])
+            self.A = tf.convert_to_tensor(self.A)
 
-def wis_generator(A,pnz=0.01,SNR=40,noise=True,df=2**10):
-    A = tf.convert_to_tensor(A)
-    M,N = A.shape
+        else:
+            self.As = None
+            self.A = tf.convert_to_tensor(A)
+        self.M, self.N = self.A.shape
+        self.I = np.triu_indices(self.M//2)
+        self.batchsize = batchsize
+        self.pnz = pnz
+        self.SNR = SNR
+        self.noise = noise
+        self.df = df
+        self.distribution = distribution
+        self.rng = tf.random.Generator.from_seed(1)
+        self.e = 2.220446e-16
 
-    mask = rng.uniform([N//2],0,1) < pnz
-    ray = rayleigh([N//2],1)
-    x = tf.where(mask,ray,0)
-    #x = tf.abs(x)
-    
-    paddings = tf.constant([[0,N//2]])
-    x = tf.pad(x,paddings)
-    
-    y = tf.tensordot(A,x,1)
-
-    df *= M
-    noise_var = (10**(-SNR/10)) * tf.reduce_mean(tf.abs(y))
-    E = (1/df**.5) * noise_var * tf.ones([M,M])
-    E = tf.linalg.LinearOperatorFullMatrix(E)
-    noise_vector = tfp.distributions.WishartLinearOperator(df, E).sample()
-    noise_vector = transform_csm_to_y(noise_vector, I)
-    noise_vector = stack_complex_tensor(noise_vector)
-    y = y + noise*noise_vector
-    #y = y.astype(np.float32)
-
-    yield y,x
-
-
-def bg_generator(A,pnz=0.01,SNR=40,noise=True):
-    A = tf.convert_to_tensor(A)
-    M,N = A.shape
-
-    mask = rng.uniform([N//2],0,1) < pnz
-    ray = rayleigh([N//2],1)
-    x = tf.where(mask,ray,0)
-    #x = tf.abs(x)
-    
-    paddings = tf.constant([[0,N//2]])
-    x = tf.pad(x,paddings)
-    
-    y = tf.tensordot(A,x,1)
-    noise_var = (10**(-SNR/10)) * tf.reduce_mean(tf.abs(y))
-    y = y + noise*rng.normal([M],0,noise_var)
-    #y = y.astype(np.float32)
-
-    yield y,x
-
-
-def get_dataset(generator,A,**kwargs):
-    A = tf.convert_to_tensor(A)
-    M,N = A.shape
-
-    output_types    = (tf.float32,tf.float32)
-    output_shapes   = ((M),(N))
-
-    call    = lambda: generator(A,**kwargs)
-    dataset = tf.data.Dataset.from_generator(call,output_types,output_shapes)
-    return dataset
-
-
-def random_matrix_generator(As, **kwargs):
-    A = random.choice(As)
-    yield bg_generator(A, **kwargs)
-
-
-
-def get_batch(dataset,batchsize):
-    dataset = dataset.repeat(-1)
-    dataset = dataset.prefetch(-1)
-    dataset = dataset.batch(batchsize)
-    return dataset
-
-
-def get_bg_batch(A,batchsize,**kwargs):
-    return get_batch(get_dataset(bg_generator,A,**kwargs),batchsize)
-
-
-def get_wis_batch(A,batchsize,**kwargs):
-    return get_batch(get_dataset(wis_generator,A,**kwargs),batchsize)
-
-
-def get_random_matrix_batch(As, batchsize, **kwargs):
-    return get_batch(get_dataset(random_matrix_generator, As, **kwargs))
-
-
-def reduce_batchsize(dataset,batchsize=1):
-    return dataset.unbatch().batch(batchsize)
-
-
-def filter_distance(_, s, distance=0.):
-    x,y,_ = rg.pos()
-    smap = transform_graphtensor_to_sourcemap(s)
-    idx = tf.where(tf.not_equal(smap,0.))
-    x = tf.convert_to_tensor(x)
-    y = tf.convert_to_tensor(y)
-    x = x[idx[0]]
-    y = y[idx[1]]
-    mask = tf.square(x) - tf.square(y) > tf.square(distance)
-    out = tf.reduce_all(mask)
-    return out
-
-
+    def __iter__(self):
+        return
     
 
+    def rayleigh(self, shape, sigma=1):
+        u = self.rng.uniform(shape, self.e, 1)
+        return sigma * tf.sqrt(-2 * tf.math.log(u))
 
+    
+    def generate(self):
+        N_vec = tf.ones(self.N // 2)
+        mask = tfd.Uniform(0*N_vec, 1*N_vec).sample() < self.pnz
+        ray = self.rayleigh([self.N//2],1)
+        x = tf.where(mask, ray, 0)
+        paddings = tf.constant([[0,self.N//2]])
+        x = tf.pad(x,paddings)
+        y = tf.tensordot(self.A,x,1)
 
-# filenames = ["1372Hz"]
-# info = []
-# for SNR in [60,40,20,0]:    
-#     for filename in filenames:
-#         file = "data/A_" + filename +".npy"
-#         A = tf.convert_to_tensor(np.load(file))
-#         train_data  = get_bg_batch(A,400,pnz=0.005,SNR=SNR,noise=True)
-#         valid_data  = train_data
-#         y,x = next(iter(train_data))
+        noise_var = (10**(-self.SNR/10)) * tf.reduce_mean(tf.abs(y))
+
+        if self.noise is False:
+            pass
+
+        elif distribution is tfd.Normal:
+            y = distribution(y, noise_var)
         
-#         y_true = tf.einsum("ij,kj->ki",A,x)
-#         signal = tf.reduce_mean(tf.abs(y_true)).numpy()
-#         noise = tf.reduce_mean(tf.abs(y_true - y)).numpy()
-#         ratio = signal / noise
-#         log = 10*np.log10(ratio)
-#         print(SNR,log)
+        elif distribution is tfd.WishartLinearOperator:
+            df *= self.M
+            E = (np.pi/df**.5) * noise_var**.5 * tf.eye(self.M,self.M)
+            E = tf.linalg.LinearOperatorFullMatrix(E)
+            noise_vector = tfd.WishartLinearOperator(df, E).sample()
+            noise_vector = PhyiscalModel.csm_to_vector(noise_vector, self.I)
+            noise_vector = PhyiscalModel.stack_complex_vector(noise_vector)
+
+            y += noise_vector
+
+        yield y, x
+
+    @property
+    def dataset(self):
+        output_types    = (tf.float32,tf.float32)
+        output_shapes   = ((self.M),(self.N))
+        dataset = tf.data.Dataset.from_generator(self.generate, output_types, output_shapes)
+        return dataset
+    
+
+    def get_batch(self):
+        if type(self.As) is list:
+            path = random.choice(self.As)
+            self.A = np.load(path)
+            self.A = tf.convert_to_tensor(self.A)
+
+        dataset = self.dataset
+        dataset = dataset.repeat(-1)
+        dataset = dataset.prefetch(-1)
+        dataset = dataset.batch(self.batchsize)
+        return dataset
+
+
+    def reduce_batchsize(dataset,batchsize=1):
+        return dataset.unbatch().batch(batchsize)
+
+    
+    def filter_distance(_, s, distance=0.):
+        x,y,_ = rg.pos()
+        smap = PhyiscalModel.vector_to_sourcemap(s)
+        idx = tf.where(tf.not_equal(smap,0.))
+        x = tf.convert_to_tensor(x)
+        y = tf.convert_to_tensor(y)
+        x = x[idx[0]]
+        y = y[idx[1]]
+        mask = tf.square(x) - tf.square(y) > tf.square(distance)
+        out = tf.reduce_all(mask)
+        return out
 
 # %%

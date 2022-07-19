@@ -1,7 +1,9 @@
 #%%
+from sklearn.tree import export_text
 from tensorflow.keras.models import load_model
 from os.path import dirname, join, pardir, normpath
 from os import listdir
+from shutil import rmtree
 from tools.training.loss_funcs import nmse_db
 from tools.training.data import get_bg_batch
 from tools.jahnke import create_sensing_matrix
@@ -17,6 +19,7 @@ he_dict = {}
 for HE in [16]:
     freq = HE*343
 
+
     PATH = dirname(__file__)
     MODELDIR = normpath(join(PATH,pardir,pardir,f"models_64_T=[1,30]"))
     A = create_sensing_matrix(freq)
@@ -27,12 +30,21 @@ for HE in [16]:
     errors = []
 
     for d in dirs:
-        print(d)
-        modelpath = normpath(join(PATH,pardir,MODELDIR,d))
-        model = load_model(modelpath,compile=True)
-        #model.compile(loss=nmse_db)
-        e = model.evaluate(data,steps=100)
-        errors.append(e)
+        try:
+            print(d)
+            modelpath = normpath(join(PATH,pardir,MODELDIR,d))
+            model = load_model(modelpath,compile=True)
+            #model.compile(loss=nmse_db)
+            e = model.evaluate(data,steps=10)
+            errors.append(e)
+        except (FileNotFoundError, OSError):
+            try:
+                rmtree(modelpath)
+                print(f"Removed {modelpath}")
+            except NotADirectoryError:
+                pass
+        except NotADirectoryError:
+            pass
 #%%
     he_dict[f"{HE}"] = errors[:]
 

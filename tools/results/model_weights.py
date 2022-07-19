@@ -1,57 +1,28 @@
 #%%
+from os.path import normpath, join
 import tensorflow as tf
 import matplotlib.pyplot as plt
-import os
 
 plt.rcParams["figure.figsize"] = (16,9)
 plt.rcParams["figure.dpi"] = 100
 plt.rc("font",size=14)
 
-MODEL 	= "He=16_SNR=40"
-PATH 	= os.path.join("models T=30",MODEL)
+BASEPATH = normpath(join("models","Clean"))
 
-# try:
-# 	model_weights
+HE = 16
+T = 40
+MODELNAME = f"He={HE}_T={T}"
+PATH = normpath(join(f"{BASEPATH}",f"{MODELNAME}"))
 
-# except:
-# 	model_weights = []
-# 	for dir in os.listdir("models/"):
-# 		if "He15" in dir:
-# 			model = tf.keras.models.load_model(os.path.join("models/",dir))
-# 			ws = [w.numpy() for w in model.weights]
-# 			lams = ws[:len(ws)//2]
-# 			gams = ws[len(ws)//2:]
-# 			model_weights.append([dir,lams,gams])
-
-# SNR20 = [name for name in model_weights if "_20SNR" in name[0]]
-# SNR40 = [name for name in model_weights if "_40SNR" in name[0]]
-# SNR60 = [name for name in model_weights if "_60SNR" in name[0]]
-
-# f1372 = [name for name in model_weights if "1372" in name[0]]
-# f2744 = [name for name in model_weights if "2744" in name[0]]
-# f5488 = [name for name in model_weights if "5488" in name[0]]
-
-
-# model = tf.keras.models.load_model(os.path.join("models/","He15.0_sim"))
-# ws = [w.numpy() for w in model.weights]
-# lams = ws[:len(ws)//2]
-# gams = ws[len(ws)//2:]
-# model_weights.append([dir,lams,gams])
 
 model = tf.keras.models.load_model(PATH)
-
+#%%
 model_weights = []
-ws = [w.numpy() for w in model.weights]
-lams = ws[:len(ws)//2]
-gams = ws[len(ws)//2:]
-model_weights.append([MODEL,lams,gams])
-
-plt.figure()
-plt.plot(gams,label=r"Stepsize $\beta$")
-plt.plot(lams,label=r"Meshsize $\lambda$")
-plt.xlabel("Layer")
-plt.ylabel("Numerical Value")
-plt.legend()
+T = model.T_save.numpy()
+ws = [w.numpy() for w in model.trainable_weights]
+lams = ws[:T]
+gams = ws[T:]
+model_weights.append([MODELNAME,lams,gams])
 
 
 
@@ -72,6 +43,9 @@ for model in model_weights:
 	ax2.plot(gams)
 	ax2.set_ylabel(r"Stepsize $\beta$")
 	ax2.set_xlabel(r"Layer $T$")
+	for ax in [ax1, ax2]:
+		#ax.set_xticks(range(1,T+1,3))
+		pass
 
 #ax1.legend()
 fig.show()
