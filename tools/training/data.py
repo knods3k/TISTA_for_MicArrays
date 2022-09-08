@@ -8,7 +8,7 @@ import numpy as np
 import os
 import random
 
-from tools.physical import physics
+from tools.physical import physics, PhyiscalModel
 from tools.environment import rg, mg
 
 

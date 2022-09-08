@@ -6,14 +6,12 @@ from tensorflow import einsum as tfeinsum
 from scipy.stats import norm
 import pandas as pd
 
-from tools.training.data import get_bg_batch
-from tools.jahnke import create_sensing_matrix
-from tools.environment import HE, SNR, mg, sv
-from tools.model import A
+from tools.physical import physics
 from tools.scratchfiles._jahnke_reverse import unstack_complex_vector
+from results.compare_cleansc import generator
 
 # SETUP
-freq = HE*343
+freq = physics.he*343
 SNR = 40
 
 BINS = 100
@@ -21,37 +19,37 @@ NCASES = 10**5
 
 dict = {}
 
-for SNR in [40,20,10]:
-    data = get_bg_batch(A,NCASES,SNR=SNR)
+generator.batchsize=200
+data = generator.get_batch()
 
-    y,x = next(iter(data))
-
-
-    # NOISY CASE
-    y_simu = y.numpy()
-    y_simu = unstack_complex_vector(y_simu.T).T
-    y_simu = y_simu[:,0]
+y,x = next(iter(data))
 
 
-    # NOISELESS CASE
-    y_calc = tfeinsum("ij,kj->ki",A,x).numpy()
-    y_calc = unstack_complex_vector(y_calc.T).T
-    y_calc = y_calc[:,0]
+# NOISY CASE
+y_simu = y.numpy()
+y_simu = unstack_complex_vector(y_simu.T).T
+y_simu = y_simu[:,0]
 
 
-    # MAGNITUDE
-    y_simu_mag = abs(y_simu)
-    y_calc_mag = abs(y_calc)
-    diff_mag   = y_simu_mag - y_calc_mag
+# NOISELESS CASE
+y_calc = tfeinsum("ij,kj->ki",physics.A,x).numpy()
+y_calc = unstack_complex_vector(y_calc.T).T
+y_calc = y_calc[:,0]
 
 
-    # ANGLE
-    y_simu_ang = angle(y_simu,deg=True)
-    y_calc_ang = angle(y_calc,deg=True)
-    diff_ang   = y_simu_ang - y_calc_ang
+# MAGNITUDE
+y_simu_mag = abs(y_simu)
+y_calc_mag = abs(y_calc)
+diff_mag   = y_simu_mag - y_calc_mag
 
-    dict[f"Magnitude {SNR}"]    = diff_mag
-    dict[f"Phase {SNR}"]        = diff_ang
+
+# ANGLE
+y_simu_ang = angle(y_simu,deg=True)
+y_calc_ang = angle(y_calc,deg=True)
+diff_ang   = y_simu_ang - y_calc_ang
+
+dict[f"Magnitude"]    = diff_mag
+dict[f"Phase"]        = diff_ang
 
 df = pd.DataFrame(dict)
 df.describe()

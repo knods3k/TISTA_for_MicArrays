@@ -8,9 +8,9 @@ plt.rcParams.update(params)
 
 #%%
 FREQ = 343 * 4
-RES = 10
+RES = 5
 
-x = np.linspace(0,2000,RES)
+x = np.linspace(0,10000,RES)
 y = np.empty(x.shape)
 # z = np.empty(x.shape)
 

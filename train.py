@@ -1,4 +1,6 @@
 #%%
+
+#%%
 from os.path import dirname, join, pardir, normpath
 from os import getcwd
 import time 
@@ -7,7 +9,7 @@ from tensorflow_probability import distributions as tfd
 from tensorflow.keras.models import load_model
 from numpy import save, load
 from tools.training.models import TISTA
-from tools.training.data import DataGenerator, collect_random_matrices
+from tools.training.data import DataGenerator
 from tools.training.callbacks import early_stopping_cb,checkpoint_cb,tensorboard_cb
 from tools.training.loss_funcs import nmse_db
 from tools.physical import PhyiscalModel
@@ -23,9 +25,9 @@ NMICS = 64
 INCREMENT = 0.01
 NSOURCES = 10
 
-Ts = [20,40,60]
+Ts = range(60,121,5) #[20,40,60]
 SNRs = [40]
-HEs = [8,4]
+HEs = [4,8]
 
 SESSION = "Clean"
 MODELDIR = normpath(join("models", f"{SESSION}"))
@@ -58,7 +60,7 @@ if __name__ == "__main__":
 #%%
             model   = TISTA(A,T=T)
             #loss    = tf.keras.losses.MeanSquaredError()
-            loss = tf.keras.losses.MeanSquaredError()#reduction=tf.keras.losses.Reduction.SUM)
+            loss = tf.keras.losses.MeanSquaredError(reduction=tf.keras.losses.Reduction.SUM)
             optim   = tf.keras.optimizers.Adam(LRATE)
             model.compile(optimizer=optim,loss=loss)
             history = model.fit(train_data,validation_data=valid_data,batch_size=BATCHSIZE,\

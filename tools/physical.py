@@ -1,4 +1,5 @@
 #%%
+from tkinter import N
 import numpy as np
 import tensorflow as tf
 from acoular import SteeringVector, MicGeom, RectGrid
@@ -110,6 +111,15 @@ class PhyiscalModel():
 		x = x.reshape(gridlen,gridlen)
 		return x
 
+	@staticmethod
+	def sourcemap_to_vector(x):
+		x = x.reshape(-1)
+		N = x.shape[0]
+		paddings = tf.constant([[0,N]])
+		x = tf.pad(x,paddings)
+		x = x.reshape(1,-1)
+		return x
+
 	# @staticmethod
 	def vector_to_sourcemap(self,x):
 		x = self.unstack_complex_vector(x)
@@ -121,7 +131,7 @@ class PhyiscalModel():
 
 physics = PhyiscalModel(HE, INCREMENT, NMICS)
 
-1#%%
+#%%
 
 
 # def find_indices(mg):

@@ -1,3 +1,4 @@
+#%%
 import tensorflow as tf 
 
 def simple_soft_threshold(r_, lam_):
@@ -35,3 +36,9 @@ def nsse(x_true, x_pred):
 	nsse_denom_ = tf.reduce_mean(tf.square(x_true))
 	squared_difference = tf.square(x_pred-x_true)
 	return tf.reduce_sum(squared_difference)/ nsse_denom_
+
+def csm_error(csm_true, csm_pred):
+	mean_squared_error = mse(csm_true, csm_pred)
+	norm = tf.norm(csm_true, ord='fro', axis=[-2,-1])
+	return mean_squared_error / norm
+# %%

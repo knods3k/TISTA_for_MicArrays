@@ -10,8 +10,8 @@ from numpy import argmin, sum, abs, load, Infinity
 SNR=40
 HE=16
 FREQ = HE*343
-NMICS = 16
-INCREMENT = 0.04
+NMICS = 64
+INCREMENT = 0.01
 
 
 
@@ -28,6 +28,7 @@ MODELPATH = normpath(join(PATH,pardir,f"{MODELDIR}",f"He={HE}_SNR={SNR}"))
 
 
 # MESAUREMENT ENVIRONMENT
+#%%
 
 mg = MicGeom(from_file=MICPATH)
 rg = RectGrid(x_max=0.5,x_min=-0.5,y_max=0.5,y_min=-0.5,z=0.5,increment=INCREMENT)

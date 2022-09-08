@@ -1,52 +1,67 @@
 #%%
-from sklearn.tree import export_text
 from tensorflow.keras.models import load_model
 from os.path import dirname, join, pardir, normpath
 from os import listdir
 from shutil import rmtree
-from tools.training.loss_funcs import nmse_db
-from tools.training.data import get_bg_batch
-from tools.jahnke import create_sensing_matrix
-from tools.environment import HE
+from tools.training.loss_funcs import nmse_db, nmse
+from tools.training.data import DataGenerator
+from tools.physical import PhyiscalModel
+from tools.environment import INCREMENT, NMICS
 from matplotlib import pyplot as plt
 import numpy as np
+import pandas as pd
+
 
 plt.rc("font",size=14)
 
+#%%
+NSOURCES = 10
 
-he_dict = {}
+all = []
 
-for HE in [16]:
+for HE in [4,8,16]:
     freq = HE*343
+    MODELDIR = normpath(join(f"models\convergence\He={HE}"))
 
-
-    PATH = dirname(__file__)
-    MODELDIR = normpath(join(PATH,pardir,pardir,f"models_64_T=[1,30]"))
-    A = create_sensing_matrix(freq)
-    data = get_bg_batch(A,1,SNR=999,noise=False)
 
     dirs = listdir(MODELDIR)
     dirs.sort()
-    errors = []
 
+    errors = []
+    Ts = []
     for d in dirs:
         try:
             print(d)
-            modelpath = normpath(join(PATH,pardir,MODELDIR,d))
-            model = load_model(modelpath,compile=True)
-            #model.compile(loss=nmse_db)
-            e = model.evaluate(data,steps=10)
-            errors.append(e)
+            modelpath = normpath(join(MODELDIR,d))
+            model = load_model(modelpath)
+            A = model.A_save
+            T = model.T_save.numpy()
+            pnz = NSOURCES / (A.shape[1] // 2)
+            generator = DataGenerator(A,100,pnz=pnz, noise=False)
+            data = generator.get_batch().repeat()
+            model.compile(loss=nmse)
+            error = model.evaluate(data,steps=1, batch_size=100)
+            Ts.append(T)
+            errors.append(error)
         except (FileNotFoundError, OSError):
             try:
                 rmtree(modelpath)
                 print(f"Removed {modelpath}")
             except NotADirectoryError:
                 pass
-        except NotADirectoryError:
+        except (NotADirectoryError):
             pass
-#%%
-    he_dict[f"{HE}"] = errors[:]
+
+    all.append(pd.DataFrame({'T': Ts, str(HE): errors}).set_index('T'))
+
+pd.concat(all, axis=1)
+
+#%%    
+
+errors = pd.concat(errors, ignore_index=True, axis=1)
+errors
+
+
 
 #%%
 fig = plt.figure()
