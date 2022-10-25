@@ -11,10 +11,10 @@ plt.rcParams["figure.figsize"] = (16,9)
 plt.rcParams["figure.dpi"] = 100
 plt.rc("font",size=14)
 
-BASEPATH = normpath(join("models","Clean"))
-
-HE = 16
+HE = 4
 T = 40
+
+BASEPATH = normpath(join("models","convergence",f"He={HE}"))
 MODELNAME = f"He={HE}_T={T}"
 HISTORY_PATH = normpath(join(f"{BASEPATH}",f"{MODELNAME}","history.npy"))
 history = np.load(HISTORY_PATH,allow_pickle=True)
@@ -41,8 +41,8 @@ for root,subdirs,files in walk(BASEPATH):
             names.append(name)
             histories.append(history)
 histories = pd.concat(histories, keys=names, axis=1)
-
-color_cycle = iter(['C2','C1','C3'])
+#%%
+color_cycle = iter([f'C{N}' for N in range(9)])
 
 plt.figure(figsize=(16,9),dpi=100)
 

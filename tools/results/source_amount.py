@@ -9,55 +9,50 @@ from tensorflow.keras.models import load_model
 from tools.training.data import DataGenerator
 from tools.training.models import eta
 from tools.training.loss_funcs import nmse_db, nmse, csm_error
+from tools.training.evaluate import evaluate_nms_error, evaluate_csm_error
 from tools.physical import PhyiscalModel
 from tools.environment import NMICS, INCREMENT
 
-from tools.results.compare_cleansc import cleansc, tista, cmf
+from tools.prediction_models import cleansc, tista, cmf
+# import warnings
+# warnings.filterwarnings('ignore')
 
-def evaluate_csm_error(data, prediction_function, physics, steps=1):
-        err = np.empty(steps)
-        for i in range(steps):
-            y,x = next(iter(data))
-            csm_true = physics.vector_to_csm(physics.unstack_complex_vector(y))
-            sourcemap = prediction_function(y)
-            x_pred = physics.sourcemap_to_vector(sourcemap)
-            y_pred =  tf.einsum("ij,kj->ki",physics.A, x_pred)
-            csm_pred = physics.vector_to_csm(physics.unstack_complex_vector(y_pred))
-            err[i] = csm_error(csm_true, csm_pred).numpy().real
-        error = np.mean(err)
-        return error
+# TODO: ADD TO PLOT CMF WITH 60 ITERATIONS
+# TODO: CALCULATE NMSE FOR CM
 
 
 T = 60
-NRUNS = 40  # NUMBER OF EVALUATION STEPS
+NRUNS = 10  # NUMBER OF EVALUATION STEPS
 
-models = {'TISTA': tista, 'CMF': cmf}
+#models = {'TISTA': tista, 'CMF': cmf}
 
 #%%
 all = []
-for model_key in ['TISTA', 'CMF']:
+for model_key in ['TISTA','CMF']:
     for HE in [4, 16]:
 
         physics = PhyiscalModel(HE, INCREMENT, NMICS)
         A = physics.A
 
-        # MODELDIR = normpath(join(f"models\convergence\He={HE}\He={HE}_T={T}"))
-        # model = load_model(MODELDIR)
+        MODELDIR = normpath(join(f"models\convergence\He={HE}\He={HE}_T={T}"))
+        model = load_model(MODELDIR)
 
         random_matrix_path = normpath(join("data", "random_matrices", f"{HE}"))
         As = random_matrix_path
 
         errors = []
         source_amounts = []
-        for nsources in range (10, 201, 10):
-            pnz = nsources / (A.shape[1] // 2)
-            data = DataGenerator(As, 1, pnz).get_batch().repeat()
+        for nsources in range (10, 101, 10):
+            data = DataGenerator(As, 1, nsources).get_batch().repeat()
 
 
             data = data.filter(lambda _,x: tf.math.count_nonzero(x) == nsources)
 
-            model = models[model_key]
-            error = evaluate_csm_error(data, model, physics, 1)
+
+            if model_key == 'TISTA':
+                error = evaluate_nms_error(data, tista, physics, NRUNS)
+            elif model_key == 'CMF':
+                error = evaluate_nms_error(data, cmf, physics, NRUNS)
 
             # err = np.empty(NRUNS)
             # for i in range(NRUNS):
@@ -81,6 +76,7 @@ for model_key in ['TISTA', 'CMF']:
 
     results = pd.concat(all, axis=1)
     # results.to_pickle('')
+    
 
 
 

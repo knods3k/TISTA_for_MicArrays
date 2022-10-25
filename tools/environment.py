@@ -22,7 +22,7 @@ PATH = dirname(__file__)
 MICPATH = normpath(join(PATH,pardir,"data",f"_tub_vogel{NMICS}_ap1.xml"))
 MODELDIR = "models"
 APATH = normpath(join(PATH, pardir,f"{MODELDIR}",f"He={HE}_SNR={SNR}",f"A_{HE}.npy"))
-MODELPATH = normpath(join(PATH,pardir,f"{MODELDIR}",f"He={HE}_SNR={SNR}"))
+MODELPATH = normpath(join('models','convergence'))
 
 
 

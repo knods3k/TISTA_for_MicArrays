@@ -1,5 +1,4 @@
 #%%
-from tkinter import N
 import numpy as np
 import tensorflow as tf
 from acoular import SteeringVector, MicGeom, RectGrid
@@ -45,9 +44,9 @@ class PhyiscalModel():
 	@property
 	def sv(self):
 		sv = SteeringVector(grid=self.rg, mics=self.mg)
-		ref_mic_idx = np.argmin(np.sum(np.abs(self.mg.mpos),axis=1))
-		ref_mic_pos = self.mg.mpos.T[ref_mic_idx]
-		sv.ref = ref_mic_pos
+		# ref_mic_idx = np.argmin(np.sum(np.abs(self.mg.mpos),axis=1))
+		# ref_mic_pos = self.mg.mpos.T[ref_mic_idx]
+		# sv.ref = ref_mic_pos
 		return sv
 
 	@property
@@ -87,7 +86,8 @@ class PhyiscalModel():
 		return v_hat
 
 	@staticmethod
-	def csm_to_vector(csm, i):
+	def csm_to_vector(csm):
+		i = np.triu_indices(csm.shape[0])
 		return csm[i]
 
 
@@ -96,10 +96,10 @@ class PhyiscalModel():
 		csm = np.zeros((M, M),dtype=complex)
 		i = np.triu_indices(M)
 		csm[i] = v
-		csm_ = csm + np.conj(csm)
+		csm_ = csm + np.conj(csm.T)
 		i = np.diag_indices(M)
 		csm_[i] /= 2
-		assert np.all(csm_ == np.conj(csm_))
+		assert np.all(csm_ == np.conj(csm_.T))
 		return csm_
 
 	@staticmethod

@@ -22,9 +22,9 @@ config.global_caching="none" # disable caching
 plt.rcParams.update(params)
 imshow_kwargs = {"origin":"lower", "extent":[-.5,.5,-.5,.5],"vmax":95,"vmin":75, "interpolation":None}
 #%%
-HE = 16
+HE = 4
 T = 60
-BASEPATH = normpath(join("models","Clean"))
+BASEPATH = normpath(join("models","convergence",f"He={HE}"))
 MODELNAME = f"He={HE}_T={T}"
 PATH = normpath(join(f"{BASEPATH}",f"{MODELNAME}"))
 model = load_model(PATH)
@@ -45,8 +45,8 @@ physics = PhyiscalModel(HE, INCREMENT, NMICS)
 
 
 A = physics.A
-pnz = NSOURCES / A.shape[1]
-generator = DataGenerator(As, batchsize=1, pnz=pnz, noise=NOISY)
+# pnz = NSOURCES / A.shape[1]
+generator = DataGenerator(As, batchsize=1, nsources=NSOURCES, noise=NOISY)
 y,x = next(iter(generator.get_batch()))
 #x[x != reduce_max(x)] = 0
 y_simu = y
@@ -74,7 +74,7 @@ def bin(input, scale=2):
 	
 	return input
 
-def tista(y_):
+def tista(y_, model = model):
 	x_pred = model(y_)
 	x_pred = physics.vector_to_sourcemap(x_pred)
 	#L_p(x_pred)
@@ -110,7 +110,7 @@ def cleansc(y_,sfreq=SFREQ,freq=FREQ):
 	return Lm
 
 
-def cmf(y_,sfreq=SFREQ,freq=FREQ):
+def cmf(y_,sfreq=SFREQ,freq=FREQ, max_iter=60):
 	# y_ = transform_tensor_to_vector(y_)
 	y_ = physics.unstack_complex_vector(y_).numpy()
 	csm_ = physics.vector_to_csm(y_)
@@ -131,7 +131,7 @@ def cmf(y_,sfreq=SFREQ,freq=FREQ):
 	#ps = PowerSpectraImport(csm=csm, sample_freq=sfreq) # it is mandatory to also set the sample_freq attribute!
 
 
-	bb = BeamformerCMF( freq_data=ps, steer=physics.sv, method = 'LassoLarsBIC')
+	bb = BeamformerCMF( freq_data=ps, steer=physics.sv, method = 'LassoLarsBIC', max_iter=max_iter)
 	#print(bb.digest)
 	pm = bb.synthetic(freqs[fftidx], 0)
 	#Lm = L_p( pm ).T
@@ -151,7 +151,25 @@ if __name__ == "__main__" and NOISY == True:
 	x_tista_noise		= (L_p(bin(tista(y_simu))))
 
 
+	ratio = 16/9
+	width = 451.6875 / 72.27
+	height = width / ratio
+	width = width * ratio
 
+	plt.figure(figsize=(width,width/2))
+	plt.subplot(231)
+	plt.imshow(x_true)
+	plt.subplot(232)
+	plt.subplot(233)
+	plt.subplot(234)
+	plt.subplot(235)
+	plt.subplot(236)
+	plt.tight_layout()
+	plt.savefig('data/plots/conv_nsources.pdf')
+
+
+
+#$$
 	fig, axs = plt.subplots(3,2,sharex=True,sharey=True,figsize=(9,16),dpi=100)
 	im = axs[0][0].imshow(x_true,**imshow_kwargs)
 	axs[0][0].set_ylabel("True")
@@ -176,10 +194,12 @@ if __name__ == "__main__" and NOISY == True:
 	axs[2][1].yaxis.tick_right()
 	axs[2][1].yaxis.set_label_position("right")
 
+	plt.tight_layout()
+
 	cbar = fig.colorbar(im, ax=axs.ravel().tolist(),orientation="horizontal")
 	cbar.ax.set_title("Sound Pressure Level [dB]")
-	fig.suptitle(f"He={HE} | NMICS={NMICS} | GRID=51x51 | T={T}")
-#%%
+	# fig.suptitle(f"He={HE} | NMICS={NMICS} | GRID=51x51 | T={T}")
+	#%%
 if __name__ == "__main__" and NOISY == False:
 	y,x = next(iter(generator.get_batch()))
 	#x[x != reduce_max(x)] = 0

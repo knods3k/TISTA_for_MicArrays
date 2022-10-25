@@ -10,21 +10,22 @@ NMICS = 64
 DIR = normpath(join("data","random_matrices"))
 
 
-for HE in [4, 8, 16]:
+for HE in [4, 16]:
+    physics = PhyiscalModel(HE,INCREMENT,NMICS)
+    mgs = acoupipe.sampler.MicGeomSampler()
+    mgs.target = physics.mg
+
+    pos = physics.mg.mpos
+    distance = np.abs(pos[:,:,None] - pos[:,None,:])
+    # min_distance = np.min(distance[distance!=0])
+    max_distance = np.max(distance[distance!=0])
+    scale = max_distance * .001
+    mgs.random_var = norm(scale=scale)
+    mgs.random_state = np.random.Generator(np.random.PCG64(1)) # reset seed
+    mgs.ddir[0] = 1.
+    mgs.ddir[1] = 1.
+
     for i in range(0,100):
-        physics = PhyiscalModel(HE,INCREMENT,NMICS)
-        mgs = acoupipe.sampler.MicGeomSampler()
-        mgs.target = physics.mg
-
-        pos = physics.mg.mpos
-        distance = np.abs(pos - pos[:,None])
-        min_distance = np.min(distance[distance!=0])
-        scale = min_distance * (1/3)
-        mgs.random_var = norm(scale=scale)
-        mgs.ddir[0] = 1.
-        mgs.ddir[1] = 1.
-
-
         name = f"A_{i:02d}.npy"
         path = normpath(join(DIR,f"{HE}",name))
         mgs.sample()

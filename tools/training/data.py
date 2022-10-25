@@ -1,12 +1,9 @@
 #%%
-#%%
-from posixpath import normpath
-from importlib_metadata import distribution
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
+from tensorflow.python.ops.stateful_random_ops import STATE_TYPE
 import numpy as np
 import os
-import random
 
 from tools.physical import physics, PhyiscalModel
 from tools.environment import rg, mg
@@ -28,7 +25,7 @@ def collect_random_matrix_path(A_path):
     return As
 
 class DataGenerator():
-    def __init__(self, A, batchsize=1, pnz=0.01, SNR=40, noise=True, df=1, distribution=tfd.Normal):
+    def __init__(self, A, batchsize=1, nsources=10, SNR=40, noise=True, df=1, distribution=tfd.Normal):
         if type(A) is str:
             self.As = collect_random_matrix_path(A)
             self.A = np.load(self.As[1])
@@ -40,12 +37,15 @@ class DataGenerator():
         self.M, self.N = self.A.shape
         self.I = np.triu_indices(self.M//2)
         self.batchsize = batchsize
-        self.pnz = pnz
+        self.nsources = nsources
+        self.pnz = nsources / (self.A.shape[1] // 2)
         self.SNR = SNR
         self.noise = noise
         self.df = df
         self.distribution = distribution
-        self.rng = tf.random.Generator.from_seed(1)
+        self.state = tf.Variable([1,2,3], dtype=STATE_TYPE)
+        self.rng = tf.random.Generator.from_state(self.state, alg=tf.random.Algorithm.PHILOX)
+        self.rng.reset(self.state) # When class is instantiated, random state is reset for reproducibility
         self.e = 2.220446e-16
 
     def __iter__(self):
@@ -58,8 +58,8 @@ class DataGenerator():
 
     
     def generate(self):
-        N_vec = tf.ones(self.N // 2)
-        mask = tfd.Uniform(0*N_vec, 1*N_vec).sample() < self.pnz
+        # N_vec = tf.ones(self.N // 2)
+        mask = self.rng.uniform([self.N//2], 0, 1) < self.pnz
         ray = self.rayleigh([self.N//2],1)
         x = tf.where(mask, ray, 0)
         paddings = tf.constant([[0,self.N//2]])
@@ -68,21 +68,21 @@ class DataGenerator():
 
         noise_var = (10**(-self.SNR/10)) * tf.reduce_mean(tf.abs(y))
 
-        if self.noise is False:
-            pass
+        # if self.noise is False:
+        #     pass
 
-        elif distribution is tfd.Normal:
-            y = distribution(y, noise_var)
+        # elif self.distribution is tfd.Normal:
+        #     y = self.distribution(y, noise_var).sample()
         
-        elif distribution is tfd.WishartLinearOperator:
-            df *= self.M
-            E = (np.pi/df**.5) * noise_var**.5 * tf.eye(self.M,self.M)
-            E = tf.linalg.LinearOperatorFullMatrix(E)
-            noise_vector = tfd.WishartLinearOperator(df, E).sample()
-            noise_vector = PhyiscalModel.csm_to_vector(noise_vector, self.I)
-            noise_vector = PhyiscalModel.stack_complex_vector(noise_vector)
+        # elif self.distribution is tfd.WishartLinearOperator:
+        #     df *= self.M
+        #     E = (np.pi/df**.5) * noise_var**.5 * tf.eye(self.M,self.M)
+        #     E = tf.linalg.LinearOperatorFullMatrix(E)
+        #     noise_vector = tfd.WishartLinearOperator(df, E).sample()
+        #     noise_vector = PhyiscalModel.csm_to_vector(noise_vector, self.I)
+        #     noise_vector = PhyiscalModel.stack_complex_vector(noise_vector)
 
-            y += noise_vector
+        #     y += noise_vector
 
         yield y, x
 
@@ -95,8 +95,9 @@ class DataGenerator():
     
 
     def get_batch(self):
-        if type(self.As) is list:
-            path = random.choice(self.As)
+        if type(self.As) is list and self.noise is True:
+            random_index = self.rng.uniform([], 0, len(self.As), dtype=tf.int32)
+            path = self.As[random_index]
             self.A = np.load(path)
             self.A = tf.convert_to_tensor(self.A)
 
