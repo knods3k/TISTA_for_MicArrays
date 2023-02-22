@@ -17,6 +17,14 @@ IM_KWARGS = {"origin":"lower", "extent":[-.5,.5,-.5,.5],"vmax":95,"vmin":75, "in
 T = 60
 NSOURCES = 10
 
+def get_rayleigh_circle(he, center=(0,0)):
+    z = .5
+    rayleigh_diameter = (1.22 * Z) / he
+    circle = plt.Circle(center, rayleigh_diameter, color='r', fill=False)
+    return circle
+
+Z = .5  # DISTANCE ARRAY TO GRID, HALF-APERTURE
+
 #%%
 all = []
 for HE in [4, 16]:
@@ -77,6 +85,9 @@ for i, ax in enumerate(grid):
         ax.set_title(model)
     if i == 0 or i == 3:
         ax.set_ylabel(f'He={He}')
+    if model == 'TISTA' or model == 'CMF':
+        circle = get_rayleigh_circle(He)
+        ax.plot(circle)
 
 plt.savefig('data/plots/smaps.pdf')
 

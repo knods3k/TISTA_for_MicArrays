@@ -25,11 +25,11 @@ for HE in [4, 16]:
     mgs.ddir[0] = 1.
     mgs.ddir[1] = 1.
 
-    for i in range(0,100):
+    for i in range(0,10):
         name = f"A_{i:02d}.npy"
         path = normpath(join(DIR,f"{HE}",name))
         mgs.sample()
-        np.save(path, physics.A)
+        np.save(path, physics.A, "w+")
 
 #%%
 for i in range(2):

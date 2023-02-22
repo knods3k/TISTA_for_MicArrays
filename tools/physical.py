@@ -35,7 +35,15 @@ class PhyiscalModel():
 	# @property
 	# def mg(self):
 	# 	return MicGeom(from_file=self.mic_path)
-	
+
+	@property
+	def ap(self):
+		pos = self.mg.mpos
+		distance = np.abs(pos[:,:,None] - pos[:,None,:])
+		# min_distance = np.min(distance[distance!=0])
+		max_distance = np.max(distance[distance!=0])
+		return max_distance
+		
 	@property
 	def rg(self):
 		return RectGrid(x_max=0.5,x_min=-0.5,y_max=0.5,y_min=-0.5,z=0.5,\
